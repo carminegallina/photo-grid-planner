@@ -125,6 +125,15 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(instagramClientSecret = clientSecret.trim()) }
     }
 
+    suspend fun setInstagramCredentials(clientId: String, clientSecret: String) {
+        updateData { current ->
+            current.copy(
+                instagramClientId = clientId.trim(),
+                instagramClientSecret = clientSecret.trim(),
+            )
+        }
+    }
+
     suspend fun setInstagramPosts(posts: List<InstagramPost>) {
         updateData { current ->
             current.copy(

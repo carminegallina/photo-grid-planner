@@ -20,7 +20,7 @@ object InstagramApi {
         clientSecret: String,
         redirectUri: String,
     ): AccessTokenResult = withContext(Dispatchers.IO) {
-        val cleanCode = code.trim()
+        val cleanCode = code.trim().substringBefore("#").removeSuffix("#_").trim()
         val cleanClientId = clientId.trim()
         val cleanClientSecret = clientSecret.trim()
 

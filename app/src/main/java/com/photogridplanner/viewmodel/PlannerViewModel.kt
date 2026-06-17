@@ -78,6 +78,17 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.setInstagramClientSecret(clientSecret) }
     }
 
+    fun saveInstagramCredentials(
+        clientId: String,
+        clientSecret: String,
+        onSaved: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            repository.setInstagramCredentials(clientId, clientSecret)
+            onSaved()
+        }
+    }
+
     fun syncInstagramProfile(
         accessToken: String = state.value.instagramAccessToken,
         userId: String = state.value.instagramUserId,

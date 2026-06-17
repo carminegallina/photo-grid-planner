@@ -136,14 +136,17 @@ fun SettingsScreen(
             Button(
                 enabled = clientId.isNotBlank() && clientSecret.isNotBlank() && !syncState.loading,
                 onClick = {
-                    viewModel.setInstagramClientId(clientId)
-                    viewModel.setInstagramClientSecret(clientSecret)
-                    context.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse(InstagramOAuth.buildLoginUrl(clientId)),
-                        ),
-                    )
+                    viewModel.saveInstagramCredentials(
+                        clientId = clientId,
+                        clientSecret = clientSecret,
+                    ) {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(InstagramOAuth.buildLoginUrl(clientId)),
+                            ),
+                        )
+                    }
                 },
             ) {
                 if (syncState.loading) {

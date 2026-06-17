@@ -19,34 +19,40 @@ object InstagramOAuth {
     }
 
     fun extractAccessToken(uri: Uri): String? {
-        uri.getQueryParameter("access_token")?.takeIf { it.isNotBlank() }?.let { return it }
-        val fragment = uri.fragment.orEmpty()
-        return fragment.split("&")
-            .mapNotNull { part ->
-                val pieces = part.split("=", limit = 2)
-                if (pieces.size == 2) pieces[0] to Uri.decode(pieces[1]) else null
-            }
-            .firstOrNull { it.first == "access_token" }
-            ?.second
-            ?.takeIf { it.isNotBlank() }
+        return extractParameter(uri, "access_token")
     }
 
     fun extractCode(uri: Uri): String? {
-        uri.getQueryParameter("code")?.takeIf { it.isNotBlank() }?.let { return it }
-        val fragment = uri.fragment.orEmpty()
-        return fragment.split("&")
-            .mapNotNull { part ->
-                val pieces = part.split("=", limit = 2)
-                if (pieces.size == 2) pieces[0] to Uri.decode(pieces[1]) else null
-            }
-            .firstOrNull { it.first == "code" }
-            ?.second
-            ?.takeIf { it.isNotBlank() }
+        return extractParameter(uri, "code")?.cleanOAuthCode()
     }
 
     fun extractError(uri: Uri): String? {
-        return uri.getQueryParameter("error_description")
-            ?: uri.getQueryParameter("error")
+        return extractParameter(uri, "error_description")
+            ?: extractParameter(uri, "error")
+    }
+
+    private fun extractParameter(uri: Uri, name: String): String? {
+        sequenceOf(uri.encodedQuery.orEmpty(), uri.encodedFragment.orEmpty())
+            .filter { it.isNotBlank() }
+            .forEach { source ->
+                source.split("&")
+                    .mapNotNull { part ->
+                        val pieces = part.split("=", limit = 2)
+                        if (pieces.size == 2) Uri.decode(pieces[0]) to Uri.decode(pieces[1]) else null
+                    }
+                    .firstOrNull { it.first == name }
+                    ?.second
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { return it }
+            }
+        return null
+    }
+
+    private fun String.cleanOAuthCode(): String {
+        return trim()
+            .substringBefore("#")
+            .removeSuffix("#_")
+            .trim()
     }
 
     private fun String.urlEncode(): String = URLEncoder.encode(this, Charsets.UTF_8.name())
