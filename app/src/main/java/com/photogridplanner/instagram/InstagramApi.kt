@@ -31,22 +31,11 @@ object InstagramApi {
         require(cleanClientId.isNotBlank()) { "Inserisci l'Instagram App Client ID." }
         require(cleanClientSecret.isNotBlank()) { "Inserisci l'Instagram App Secret." }
 
-        val body = listOf(
-            "client_id" to cleanClientId,
-            "client_secret" to cleanClientSecret,
-            "grant_type" to "authorization_code",
-            "redirect_uri" to redirectUri,
-            "code" to cleanCode,
-        ).joinToString("&") { (key, value) ->
-            "${key.urlEncode()}=${value.urlEncode()}"
-        }
-
-        val response = postFirstSuccessful(
-            urls = listOf(
-                "https://graph.instagram.com/v25.0/oauth/access_token",
-                "https://api.instagram.com/oauth/access_token",
-            ),
-            body = body,
+        val response = exchangeCodeWithRedirectFallbacks(
+            code = cleanCode,
+            clientId = cleanClientId,
+            clientSecret = cleanClientSecret,
+            redirectUris = redirectUri.redirectVariants(),
         )
 
         AccessTokenResult(
@@ -150,16 +139,45 @@ object InstagramApi {
         }
     }
 
-    private fun postFirstSuccessful(urls: List<String>, body: String): JSONObject {
+    private fun exchangeCodeWithRedirectFallbacks(
+        code: String,
+        clientId: String,
+        clientSecret: String,
+        redirectUris: List<String>,
+    ): JSONObject {
         val failures = mutableListOf<String>()
-        urls.forEach { url ->
+        redirectUris.forEach { redirectUri ->
+            val body = listOf(
+                "client_id" to clientId,
+                "client_secret" to clientSecret,
+                "grant_type" to "authorization_code",
+                "redirect_uri" to redirectUri,
+                "code" to code,
+            ).joinToString("&") { (key, value) ->
+                "${key.urlEncode()}=${value.urlEncode()}"
+            }
+
             runCatching {
-                return postForm(url = url, body = body)
+                return postForm(
+                    url = "https://api.instagram.com/oauth/access_token",
+                    body = body,
+                )
             }.onFailure { error ->
-                failures += "${url.substringAfter("https://")}: ${error.message}"
+                failures += "$redirectUri -> ${error.message}"
             }
         }
-        error("Scambio token non riuscito. ${failures.joinToString(" | ")}")
+        error("Scambio token non riuscito. Verifica Redirect URI Meta e App Secret. ${failures.joinToString(" | ")}")
+    }
+
+    private fun String.redirectVariants(): List<String> {
+        val clean = trim().trimEnd('/')
+        return listOf(
+            clean,
+            "$clean/",
+            clean.removeSuffix(".html"),
+            "${clean.removeSuffix(".html")}/",
+            InstagramOAuth.AppRedirectUri,
+        ).distinct()
     }
 
     private fun String.urlEncode(): String = URLEncoder.encode(this, Charsets.UTF_8.name())
