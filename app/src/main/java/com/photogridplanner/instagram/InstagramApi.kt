@@ -5,6 +5,7 @@ import com.photogridplanner.data.InstagramPost
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -31,11 +32,17 @@ object InstagramApi {
         require(cleanClientId.isNotBlank()) { "Inserisci l'Instagram App Client ID." }
         require(cleanClientSecret.isNotBlank()) { "Inserisci l'Instagram App Secret." }
 
-        val response = exchangeCodeWithRedirectFallbacks(
-            code = cleanCode,
-            clientId = cleanClientId,
-            clientSecret = cleanClientSecret,
-            redirectUris = redirectUri.redirectVariants(),
+        Log.d(Tag, "Exchanging Instagram code with redirect_uri=$redirectUri")
+
+        val response = postMultipart(
+            url = "https://api.instagram.com/oauth/access_token",
+            fields = mapOf(
+                "client_id" to cleanClientId,
+                "client_secret" to cleanClientSecret,
+                "grant_type" to "authorization_code",
+                "redirect_uri" to redirectUri,
+                "code" to cleanCode,
+            ),
         )
 
         AccessTokenResult(
@@ -107,14 +114,26 @@ object InstagramApi {
         }
     }
 
-    private fun postForm(url: String, body: String): JSONObject {
+    private fun postMultipart(url: String, fields: Map<String, String>): JSONObject {
+        val boundary = "PhotoGridPlanner-${UUID.randomUUID()}"
+        val lineBreak = "\r\n"
+        val body = buildString {
+            fields.forEach { (key, value) ->
+                append("--").append(boundary).append(lineBreak)
+                append("Content-Disposition: form-data; name=\"").append(key).append("\"").append(lineBreak)
+                append(lineBreak)
+                append(value)
+                append(lineBreak)
+            }
+            append("--").append(boundary).append("--").append(lineBreak)
+        }
         val bodyBytes = body.toByteArray(Charsets.UTF_8)
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 20_000
             readTimeout = 30_000
             doOutput = true
-            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Content-Length", bodyBytes.size.toString())
         }
@@ -137,47 +156,6 @@ object InstagramApi {
         } finally {
             connection.disconnect()
         }
-    }
-
-    private fun exchangeCodeWithRedirectFallbacks(
-        code: String,
-        clientId: String,
-        clientSecret: String,
-        redirectUris: List<String>,
-    ): JSONObject {
-        val failures = mutableListOf<String>()
-        redirectUris.forEach { redirectUri ->
-            val body = listOf(
-                "client_id" to clientId,
-                "client_secret" to clientSecret,
-                "grant_type" to "authorization_code",
-                "redirect_uri" to redirectUri,
-                "code" to code,
-            ).joinToString("&") { (key, value) ->
-                "${key.urlEncode()}=${value.urlEncode()}"
-            }
-
-            runCatching {
-                return postForm(
-                    url = "https://api.instagram.com/oauth/access_token",
-                    body = body,
-                )
-            }.onFailure { error ->
-                failures += "$redirectUri -> ${error.message}"
-            }
-        }
-        error("Scambio token non riuscito. Verifica Redirect URI Meta e App Secret. ${failures.joinToString(" | ")}")
-    }
-
-    private fun String.redirectVariants(): List<String> {
-        val clean = trim().trimEnd('/')
-        return listOf(
-            clean,
-            "$clean/",
-            clean.removeSuffix(".html"),
-            "${clean.removeSuffix(".html")}/",
-            InstagramOAuth.AppRedirectUri,
-        ).distinct()
     }
 
     private fun String.urlEncode(): String = URLEncoder.encode(this, Charsets.UTF_8.name())

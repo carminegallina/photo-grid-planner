@@ -41,7 +41,7 @@ class InstagramAuthActivity : ComponentActivity() {
                         code = code,
                         clientId = settings.instagramClientId,
                         clientSecret = settings.instagramClientSecret,
-                        redirectUri = InstagramOAuth.RedirectUri,
+                        redirectUri = InstagramOAuth.redirectUriForTokenExchange(callbackUri),
                     )
                 }.onSuccess { tokenResult ->
                     repository.setInstagramConnection(tokenResult.accessToken, tokenResult.userId)

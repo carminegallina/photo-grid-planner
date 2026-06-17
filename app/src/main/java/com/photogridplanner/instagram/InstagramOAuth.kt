@@ -31,6 +31,18 @@ object InstagramOAuth {
             ?: extractParameter(uri, "error")
     }
 
+    fun redirectUriForTokenExchange(callbackUri: Uri): String {
+        return if (callbackUri.scheme == "https" && callbackUri.host == "carminegallina.github.io") {
+            callbackUri.buildUpon()
+                .clearQuery()
+                .fragment(null)
+                .build()
+                .toString()
+        } else {
+            RedirectUri
+        }
+    }
+
     private fun extractParameter(uri: Uri, name: String): String? {
         sequenceOf(uri.encodedQuery.orEmpty(), uri.encodedFragment.orEmpty())
             .filter { it.isNotBlank() }
