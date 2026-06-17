@@ -1,5 +1,6 @@
 package com.photogridplanner.instagram
 
+import android.util.Log
 import com.photogridplanner.data.InstagramPost
 import java.net.HttpURLConnection
 import java.net.URL
@@ -9,6 +10,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 object InstagramApi {
+    private const val Tag = "PhotoGridInstagram"
+
     data class AccessTokenResult(
         val accessToken: String,
         val userId: String,
@@ -38,8 +41,11 @@ object InstagramApi {
             "${key.urlEncode()}=${value.urlEncode()}"
         }
 
-        val response = postForm(
-            url = "https://api.instagram.com/oauth/access_token",
+        val response = postFirstSuccessful(
+            urls = listOf(
+                "https://graph.instagram.com/v25.0/oauth/access_token",
+                "https://api.instagram.com/oauth/access_token",
+            ),
             body = body,
         )
 
@@ -134,12 +140,26 @@ object InstagramApi {
                         .takeIf { it.isNotBlank() }
                         ?: JSONObject(responseBody).optJSONObject("error")?.optString("message")
                 }.getOrNull()
-                error(message?.takeIf { it.isNotBlank() } ?: "Errore Instagram OAuth HTTP $code")
+                val finalMessage = message?.takeIf { it.isNotBlank() } ?: "Errore Instagram OAuth HTTP $code"
+                Log.e(Tag, "OAuth token exchange failed at $url: $finalMessage; body=$responseBody")
+                error(finalMessage)
             }
             JSONObject(responseBody)
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun postFirstSuccessful(urls: List<String>, body: String): JSONObject {
+        val failures = mutableListOf<String>()
+        urls.forEach { url ->
+            runCatching {
+                return postForm(url = url, body = body)
+            }.onFailure { error ->
+                failures += "${url.substringAfter("https://")}: ${error.message}"
+            }
+        }
+        error("Scambio token non riuscito. ${failures.joinToString(" | ")}")
     }
 
     private fun String.urlEncode(): String = URLEncoder.encode(this, Charsets.UTF_8.name())
