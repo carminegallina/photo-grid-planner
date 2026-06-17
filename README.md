@@ -22,7 +22,10 @@ Non usa backend e non modifica il profilo Instagram reale.
 |-- gradlew
 |-- gradlew.bat
 |-- docs/
-|   `-- instagram-auth.html
+|   |-- data-deletion.html
+|   |-- deauthorize.html
+|   |-- instagram-auth.html
+|   `-- privacy.html
 |-- gradle/
 |   |-- libs.versions.toml
 |   `-- wrapper/
@@ -176,3 +179,19 @@ Il pulsante `Accedi con Instagram` apre il login ufficiale nel browser e l'app c
 La sincronizzazione scarica i post disponibili tramite API ufficiale e li mostra nella schermata Griglia. Il riordino resta locale: Instagram non permette di cambiare l'ordine reale dei post pubblicati. Il pulsante reset nella Griglia riporta l'anteprima all'ordine originale del profilo, mentre il pulsante salva memorizza layout alternativi sul telefono.
 
 Se Meta restituisce solo un codice OAuth invece del token, serve un backend sicuro per scambiare quel codice con un access token. Non inserire mai client secret o password Instagram dentro l'APK.
+
+## URL Meta utili
+
+```text
+Redirect OAuth:
+https://carminegallina.github.io/photo-grid-planner/instagram-auth.html
+
+Privacy Policy:
+https://carminegallina.github.io/photo-grid-planner/privacy.html
+
+Callback rimozione autorizzazione:
+https://carminegallina.github.io/photo-grid-planner/deauthorize.html
+
+Richiesta eliminazione dati:
+https://carminegallina.github.io/photo-grid-planner/data-deletion.html
+```
