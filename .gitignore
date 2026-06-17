@@ -1,6 +1,7 @@
 .gradle/
 .gradle-local/
 .android-build-tools/
+.pages-root/
 .idea/
 build/
 */build/

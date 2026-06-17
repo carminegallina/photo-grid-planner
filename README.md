@@ -22,6 +22,8 @@ Non usa backend e non modifica il profilo Instagram reale.
 |-- gradlew
 |-- gradlew.bat
 |-- docs/
+|   |-- .well-known/
+|   |   `-- assetlinks.json
 |   |-- data-deletion.html
 |   |-- deauthorize.html
 |   |-- instagram-auth.html
@@ -172,6 +174,12 @@ Questo URI HTTPS va configurato nell'app Meta/Instagram. La pagina `docs/instagr
 
 ```text
 photogridplanner://instagram-auth
+```
+
+L'app supporta anche Android App Links per aprire direttamente l'URL HTTPS nell'app. Il file di verifica principale e pubblicato nel repository root `carminegallina.github.io`:
+
+```text
+https://carminegallina.github.io/.well-known/assetlinks.json
 ```
 
 Il pulsante `Accedi con Instagram` apre il login ufficiale nel browser. Instagram restituisce un codice OAuth, poi l'app lo scambia con un access token usando Client ID e App Secret salvati solo sul telefono.

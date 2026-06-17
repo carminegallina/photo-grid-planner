@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.photogridplanner",
+      "sha256_cert_fingerprints": [
+        "5D:63:51:43:EC:7B:95:4F:6E:66:A1:BE:DC:56:3C:24:3B:27:2C:75:E3:31:DF:28:31:64:30:5A:6D:3F:E3:D0"
+      ]
+    }
+  }
+]
