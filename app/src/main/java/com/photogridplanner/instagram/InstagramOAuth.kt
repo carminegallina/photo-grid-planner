@@ -13,8 +13,8 @@ object InstagramOAuth {
             "?client_id=${clientId.trim().urlEncode()}" +
             "&redirect_uri=${RedirectUri.urlEncode()}" +
             "&scope=${scope.urlEncode()}" +
-            "&response_type=token" +
-            "&force_authentication=1" +
+            "&response_type=code" +
+            "&force_reauth=true" +
             "&enable_fb_login=0"
     }
 

@@ -9,6 +9,46 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 object InstagramApi {
+    data class AccessTokenResult(
+        val accessToken: String,
+        val userId: String,
+    )
+
+    suspend fun exchangeCodeForAccessToken(
+        code: String,
+        clientId: String,
+        clientSecret: String,
+        redirectUri: String,
+    ): AccessTokenResult = withContext(Dispatchers.IO) {
+        val cleanCode = code.trim()
+        val cleanClientId = clientId.trim()
+        val cleanClientSecret = clientSecret.trim()
+
+        require(cleanCode.isNotBlank()) { "Codice Instagram non valido." }
+        require(cleanClientId.isNotBlank()) { "Inserisci l'Instagram App Client ID." }
+        require(cleanClientSecret.isNotBlank()) { "Inserisci l'Instagram App Secret." }
+
+        val body = listOf(
+            "client_id" to cleanClientId,
+            "client_secret" to cleanClientSecret,
+            "grant_type" to "authorization_code",
+            "redirect_uri" to redirectUri,
+            "code" to cleanCode,
+        ).joinToString("&") { (key, value) ->
+            "${key.urlEncode()}=${value.urlEncode()}"
+        }
+
+        val response = postForm(
+            url = "https://api.instagram.com/oauth/access_token",
+            body = body,
+        )
+
+        AccessTokenResult(
+            accessToken = response.getString("access_token"),
+            userId = response.optString("user_id").takeIf { it.isNotBlank() } ?: "me",
+        )
+    }
+
     suspend fun fetchPosts(
         accessToken: String,
         userId: String,
@@ -67,6 +107,36 @@ object InstagramApi {
                 error(message?.takeIf { it.isNotBlank() } ?: "Errore Instagram API HTTP $code")
             }
             JSONObject(body)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun postForm(url: String, body: String): JSONObject {
+        val bodyBytes = body.toByteArray(Charsets.UTF_8)
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 20_000
+            readTimeout = 30_000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Content-Length", bodyBytes.size.toString())
+        }
+        return try {
+            connection.outputStream.use { stream -> stream.write(bodyBytes) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val responseBody = stream.bufferedReader().use { it.readText() }
+            if (code !in 200..299) {
+                val message = runCatching {
+                    JSONObject(responseBody).optString("error_message")
+                        .takeIf { it.isNotBlank() }
+                        ?: JSONObject(responseBody).optJSONObject("error")?.optString("message")
+                }.getOrNull()
+                error(message?.takeIf { it.isNotBlank() } ?: "Errore Instagram OAuth HTTP $code")
+            }
+            JSONObject(responseBody)
         } finally {
             connection.disconnect()
         }

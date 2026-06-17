@@ -121,6 +121,10 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(instagramClientId = clientId.trim()) }
     }
 
+    suspend fun setInstagramClientSecret(clientSecret: String) {
+        updateData { current -> current.copy(instagramClientSecret = clientSecret.trim()) }
+    }
+
     suspend fun setInstagramPosts(posts: List<InstagramPost>) {
         updateData { current ->
             current.copy(
@@ -184,6 +188,7 @@ class PlannerRepository(context: Context) {
             preferences[Keys.ShowHiddenPosts] = next.showHiddenPosts
             preferences[Keys.InstagramAccessToken] = next.instagramAccessToken
             preferences[Keys.InstagramClientId] = next.instagramClientId
+            preferences[Keys.InstagramClientSecret] = next.instagramClientSecret
             preferences[Keys.InstagramUserId] = next.instagramUserId
             preferences[Keys.InstagramPostsJson] = encodeInstagramPosts(next.instagramPosts)
             preferences[Keys.InstagramOrderJson] = encodeStringList(next.instagramOrder)
@@ -203,6 +208,7 @@ class PlannerRepository(context: Context) {
             showHiddenPosts = showHiddenPosts,
             instagramAccessToken = this[Keys.InstagramAccessToken].orEmpty(),
             instagramClientId = this[Keys.InstagramClientId].orEmpty(),
+            instagramClientSecret = this[Keys.InstagramClientSecret].orEmpty(),
             instagramUserId = this[Keys.InstagramUserId] ?: "me",
             instagramPosts = decodeInstagramPosts(this[Keys.InstagramPostsJson].orEmpty()),
             instagramOrder = decodeStringList(this[Keys.InstagramOrderJson].orEmpty()),
@@ -345,6 +351,7 @@ class PlannerRepository(context: Context) {
         val ShowHiddenPosts = booleanPreferencesKey("show_hidden_posts")
         val InstagramAccessToken = stringPreferencesKey("instagram_access_token")
         val InstagramClientId = stringPreferencesKey("instagram_client_id")
+        val InstagramClientSecret = stringPreferencesKey("instagram_client_secret")
         val InstagramUserId = stringPreferencesKey("instagram_user_id")
         val InstagramPostsJson = stringPreferencesKey("instagram_posts_json")
         val InstagramOrderJson = stringPreferencesKey("instagram_order_json")

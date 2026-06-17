@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.photogridplanner.data.PlannerData
 import com.photogridplanner.instagram.InstagramOAuth
@@ -59,9 +60,13 @@ fun SettingsScreen(
     val context = LocalContext.current
     val syncState by viewModel.instagramSyncState.collectAsState()
     var clientId by remember { mutableStateOf(state.instagramClientId) }
+    var clientSecret by remember { mutableStateOf(state.instagramClientSecret) }
 
     LaunchedEffect(state.instagramClientId) {
         clientId = state.instagramClientId
+    }
+    LaunchedEffect(state.instagramClientSecret) {
+        clientSecret = state.instagramClientSecret
     }
 
     Column(
@@ -105,6 +110,14 @@ fun SettingsScreen(
                 singleLine = true,
             )
             OutlinedTextField(
+                value = clientSecret,
+                onValueChange = { clientSecret = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Instagram App Secret") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
+            OutlinedTextField(
                 value = InstagramOAuth.RedirectUri,
                 onValueChange = {},
                 modifier = Modifier.fillMaxWidth(),
@@ -121,9 +134,10 @@ fun SettingsScreen(
                 readOnly = true,
             )
             Button(
-                enabled = clientId.isNotBlank() && !syncState.loading,
+                enabled = clientId.isNotBlank() && clientSecret.isNotBlank() && !syncState.loading,
                 onClick = {
                     viewModel.setInstagramClientId(clientId)
+                    viewModel.setInstagramClientSecret(clientSecret)
                     context.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
@@ -157,7 +171,7 @@ fun SettingsScreen(
                 )
             }
             Text(
-                text = "Configura il Redirect URI Meta nella dashboard. La pagina online riapre l'app e il token viene salvato automaticamente dopo il login ufficiale.",
+                text = "Configura il Redirect URI Meta nella dashboard. Client ID e App Secret vengono salvati solo sul telefono per completare lo scambio sicuro del codice OAuth.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -51,6 +51,7 @@ data class PlannerData(
     val showHiddenPosts: Boolean = true,
     val instagramAccessToken: String = "",
     val instagramClientId: String = "",
+    val instagramClientSecret: String = "",
     val instagramUserId: String = "me",
     val instagramPosts: List<InstagramPost> = emptyList(),
     val instagramOrder: List<String> = emptyList(),

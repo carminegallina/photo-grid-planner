@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.photogridplanner.data.PlannerRepository
 import com.photogridplanner.instagram.InstagramApi
 import com.photogridplanner.instagram.InstagramOAuth
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class InstagramAuthActivity : ComponentActivity() {
@@ -27,26 +28,58 @@ class InstagramAuthActivity : ComponentActivity() {
         val accessToken = InstagramOAuth.extractAccessToken(callbackUri)
         if (accessToken.isNullOrBlank()) {
             val code = InstagramOAuth.extractCode(callbackUri)
-            val message = if (code.isNullOrBlank()) {
-                "Token Instagram non ricevuto."
-            } else {
-                "Ricevuto un codice OAuth. Per convertirlo in token serve un backend Meta sicuro."
+            if (code.isNullOrBlank()) {
+                finishAndReturn("Token Instagram non ricevuto.")
+                return
             }
-            finishAndReturn(message)
+
+            lifecycleScope.launch {
+                val repository = PlannerRepository(applicationContext)
+                val settings = repository.data.first()
+                runCatching {
+                    InstagramApi.exchangeCodeForAccessToken(
+                        code = code,
+                        clientId = settings.instagramClientId,
+                        clientSecret = settings.instagramClientSecret,
+                        redirectUri = InstagramOAuth.RedirectUri,
+                    )
+                }.onSuccess { tokenResult ->
+                    repository.setInstagramConnection(tokenResult.accessToken, tokenResult.userId)
+                    syncPosts(
+                        repository = repository,
+                        accessToken = tokenResult.accessToken,
+                        userId = tokenResult.userId,
+                    )
+                }.onFailure { error ->
+                    finishAndReturn(error.message ?: "Scambio token Instagram non riuscito.")
+                }
+            }
             return
         }
 
         lifecycleScope.launch {
             val repository = PlannerRepository(applicationContext)
             repository.setInstagramConnection(accessToken, "me")
-            runCatching {
-                InstagramApi.fetchPosts(accessToken = accessToken, userId = "me")
-            }.onSuccess { posts ->
-                repository.setInstagramPosts(posts)
-                finishAndReturn("Instagram collegato: ${posts.size} post sincronizzati.")
-            }.onFailure { error ->
-                finishAndReturn(error.message ?: "Instagram collegato, ma sincronizzazione non riuscita.")
-            }
+            syncPosts(
+                repository = repository,
+                accessToken = accessToken,
+                userId = "me",
+            )
+        }
+    }
+
+    private suspend fun syncPosts(
+        repository: PlannerRepository,
+        accessToken: String,
+        userId: String,
+    ) {
+        runCatching {
+            InstagramApi.fetchPosts(accessToken = accessToken, userId = userId)
+        }.onSuccess { posts ->
+            repository.setInstagramPosts(posts)
+            finishAndReturn("Instagram collegato: ${posts.size} post sincronizzati.")
+        }.onFailure { error ->
+            finishAndReturn(error.message ?: "Instagram collegato, ma sincronizzazione non riuscita.")
         }
     }
 

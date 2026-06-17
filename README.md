@@ -162,7 +162,7 @@ La sezione Cutter permette di:
 
 ## Collegamento Instagram
 
-La sezione `Impostazioni > Instagram` accetta l'`Instagram App Client ID` e mostra il redirect URI:
+La sezione `Impostazioni > Instagram` accetta l'`Instagram App Client ID`, l'`Instagram App Secret` e mostra il redirect URI:
 
 ```text
 https://carminegallina.github.io/photo-grid-planner/instagram-auth.html
@@ -174,11 +174,11 @@ Questo URI HTTPS va configurato nell'app Meta/Instagram. La pagina `docs/instagr
 photogridplanner://instagram-auth
 ```
 
-Il pulsante `Accedi con Instagram` apre il login ufficiale nel browser e l'app cattura automaticamente l'access token quando Instagram lo restituisce al deep link.
+Il pulsante `Accedi con Instagram` apre il login ufficiale nel browser. Instagram restituisce un codice OAuth, poi l'app lo scambia con un access token usando Client ID e App Secret salvati solo sul telefono.
 
 La sincronizzazione scarica i post disponibili tramite API ufficiale e li mostra nella schermata Griglia. Il riordino resta locale: Instagram non permette di cambiare l'ordine reale dei post pubblicati. Il pulsante reset nella Griglia riporta l'anteprima all'ordine originale del profilo, mentre il pulsante salva memorizza layout alternativi sul telefono.
 
-Se Meta restituisce solo un codice OAuth invece del token, serve un backend sicuro per scambiare quel codice con un access token. Non inserire mai client secret o password Instagram dentro l'APK.
+Per un'app pubblica sarebbe meglio spostare lo scambio del codice OAuth su un backend sicuro. In questa versione personale di test, l'App Secret viene inserito manualmente nell'app e resta salvato localmente sul telefono.
 
 ## URL Meta utili
 
