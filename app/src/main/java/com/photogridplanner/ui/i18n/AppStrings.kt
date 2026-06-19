@@ -86,6 +86,9 @@ class AppStrings(private val language: AppLanguage) {
         Regex("""^Selezionate (\d+)/(\d+)$""").matchEntire(raw)?.let {
             return "Selected ${it.groupValues[1]}/${it.groupValues[2]}"
         }
+        Regex("""^(\d+) foto$""").matchEntire(raw)?.let {
+            return "${it.groupValues[1]} photos"
+        }
         Regex("""^Layout (\d+)$""").matchEntire(raw)?.let {
             return "Layout ${it.groupValues[1]}"
         }
@@ -363,6 +366,9 @@ private val EnglishStrings = mapOf(
     "Libreria foto" to "Photo library",
     "Importa nella griglia" to "Import to grid",
     "Tieni premuto e trascina per selezionare piu foto" to "Press and drag to select multiple photos",
+    "Tutte le foto" to "All photos",
+    "Album" to "Albums",
+    "Tutti gli album" to "All albums",
     "Accesso parziale" to "Partial access",
     "Stai vedendo solo le immagini che hai autorizzato. Puoi modificarle quando vuoi." to
         "You are only seeing the images you allowed. You can change them at any time.",

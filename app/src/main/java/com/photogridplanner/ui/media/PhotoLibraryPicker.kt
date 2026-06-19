@@ -42,10 +42,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -83,9 +85,27 @@ enum class PhotoSelectionMode {
 }
 
 private data class PhotoAsset(
-    val id: Long,
+    val id: String,
     val uri: Uri,
+    val albumId: String,
+    val albumName: String,
+    val takenAtMillis: Long,
 )
+
+private data class PhotoAlbum(
+    val id: String,
+    val name: String,
+    val coverUri: Uri,
+    val count: Int,
+)
+
+private enum class PhotoLibrarySection {
+    AllPhotos,
+    Albums,
+}
+
+private const val GeneratedAlbumId = "photogridplanner_generated"
+private const val GeneratedAlbumName = "Photo Grid Planner"
 
 private data class PhotoAccessState(
     val hasAccess: Boolean,
@@ -250,8 +270,21 @@ private fun PhotoLibraryContent(
     val density = LocalDensity.current
     var cellSizePx by remember { mutableIntStateOf(0) }
     val cellStridePx = cellSizePx + with(density) { 6.dp.toPx() }
+    val albums = remember(photos) { buildPhotoAlbums(photos) }
+    var librarySection by remember { mutableStateOf(PhotoLibrarySection.AllPhotos) }
+    var selectedAlbumId by remember { mutableStateOf<String?>(null) }
 
-    fun photosInSelectionRectangle(startIndex: Int, endIndex: Int): List<Uri> {
+    LaunchedEffect(albums) {
+        if (selectedAlbumId != null && albums.none { it.id == selectedAlbumId }) {
+            selectedAlbumId = null
+        }
+    }
+
+    fun photosInSelectionRectangle(
+        items: List<PhotoAsset>,
+        startIndex: Int,
+        endIndex: Int,
+    ): List<Uri> {
         val startRow = startIndex / PhotoGridColumns
         val startColumn = startIndex % PhotoGridColumns
         val endRow = endIndex / PhotoGridColumns
@@ -264,7 +297,7 @@ private fun PhotoLibraryContent(
         return buildList {
             for (row in firstRow..lastRow) {
                 for (column in firstColumn..lastColumn) {
-                    photos.getOrNull(row * PhotoGridColumns + column)?.let { add(it.uri) }
+                    items.getOrNull(row * PhotoGridColumns + column)?.let { add(it.uri) }
                 }
             }
         }
@@ -331,34 +364,75 @@ private fun PhotoLibraryContent(
 
             photos.isEmpty() -> EmptyPhotoLibrary()
 
-            else -> LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 280.dp, max = 440.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(
-                    items = photos,
-                    key = { it.id },
-                ) { photo ->
-                    val index = photos.indexOf(photo)
-                    val isSelected = photo.uri in selected
-                    PhotoCell(
-                        photo = photo,
-                        index = index,
-                        photoCount = photos.size,
-                        selected = isSelected,
-                        dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
-                        cellStridePx = cellStridePx,
-                        onCellSizeChanged = { size -> cellSizePx = size },
-                        onClick = { onTogglePhoto(photo.uri) },
-                        onAddToSelection = { onAddToSelection(listOf(photo.uri)) },
-                        onDragSelect = { targetIndex ->
-                            onAddToSelection(photosInSelectionRectangle(index, targetIndex))
-                        },
+            else -> {
+                PhotoLibrarySectionTabs(
+                    section = librarySection,
+                    onShowAll = {
+                        librarySection = PhotoLibrarySection.AllPhotos
+                        selectedAlbumId = null
+                    },
+                    onShowAlbums = {
+                        librarySection = PhotoLibrarySection.Albums
+                        selectedAlbumId = null
+                    },
+                )
+
+                if (librarySection == PhotoLibrarySection.Albums && selectedAlbumId == null) {
+                    AlbumGrid(
+                        albums = albums,
+                        onAlbumSelected = { selectedAlbumId = it },
                     )
+                } else {
+                    val visiblePhotos = selectedAlbumId?.let { albumId ->
+                        photos.filter { it.albumId == albumId }
+                    }.orEmpty().ifEmpty {
+                        if (selectedAlbumId == null) photos else emptyList()
+                    }
+                    val selectedAlbum = albums.firstOrNull { it.id == selectedAlbumId }
+
+                    if (selectedAlbum != null) {
+                        TextButton(onClick = { selectedAlbumId = null }) {
+                            LocalizedText("Tutti gli album")
+                        }
+                        Text(
+                            text = selectedAlbum.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(PhotoGridColumns),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 280.dp, max = 440.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(
+                            items = visiblePhotos,
+                            key = { it.id },
+                        ) { photo ->
+                            val index = visiblePhotos.indexOf(photo)
+                            val isSelected = photo.uri in selected
+                            PhotoCell(
+                                photo = photo,
+                                index = index,
+                                photoCount = visiblePhotos.size,
+                                selected = isSelected,
+                                dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
+                                cellStridePx = cellStridePx,
+                                onCellSizeChanged = { size -> cellSizePx = size },
+                                onClick = { onTogglePhoto(photo.uri) },
+                                onAddToSelection = { onAddToSelection(listOf(photo.uri)) },
+                                onDragSelect = { targetIndex ->
+                                    onAddToSelection(
+                                        photosInSelectionRectangle(visiblePhotos, index, targetIndex),
+                                    )
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -445,6 +519,109 @@ private fun PhotoCell(
 }
 
 private const val PhotoGridColumns = 3
+
+@Composable
+private fun PhotoLibrarySectionTabs(
+    section: PhotoLibrarySection,
+    onShowAll: () -> Unit,
+    onShowAlbums: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = section == PhotoLibrarySection.AllPhotos,
+            onClick = onShowAll,
+            label = { LocalizedText("Tutte le foto") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+            },
+        )
+        FilterChip(
+            selected = section == PhotoLibrarySection.Albums,
+            onClick = onShowAlbums,
+            label = { LocalizedText("Album") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Folder,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun AlbumGrid(
+    albums: List<PhotoAlbum>,
+    onAlbumSelected: (String) -> Unit,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 280.dp, max = 440.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(albums, key = { it.id }) { album ->
+            Box(
+                modifier = Modifier
+                    .aspectRatio(1.08f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onAlbumSelected(album.id) },
+            ) {
+                AsyncUriImage(
+                    uri = album.coverUri.toString(),
+                    contentScale = ContentScale.Crop,
+                    maxSize = 560,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(6.dp),
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)) {
+                        Text(
+                            text = album.name,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                        )
+                        LocalizedText(
+                            text = "${album.count} foto",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun buildPhotoAlbums(photos: List<PhotoAsset>): List<PhotoAlbum> {
+    return photos
+        .groupBy { it.albumId }
+        .map { (id, albumPhotos) ->
+            val cover = albumPhotos.maxByOrNull { it.takenAtMillis } ?: return@map null
+            PhotoAlbum(
+                id = id,
+                name = cover.albumName,
+                coverUri = cover.uri,
+                count = albumPhotos.size,
+            )
+        }
+        .filterNotNull()
+        .sortedByDescending { album ->
+            photos.firstOrNull { it.albumId == album.id }?.takenAtMillis ?: 0L
+        }
+}
 
 @Composable
 private fun EmptyPhotoLibrary() {
@@ -556,10 +733,14 @@ private fun Context.hasPermission(permission: String): Boolean {
     return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }
 
-private fun queryDeviceImages(context: Context): List<PhotoAsset> {
+private suspend fun queryDeviceImages(context: Context): List<PhotoAsset> {
     val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.DATE_TAKEN,
+        MediaStore.Images.Media.DATE_ADDED,
+        MediaStore.Images.Media.BUCKET_ID,
+        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
     )
     // Generated cuts receive a deterministic DATE_TAKEN value, so this keeps their
     // intended publishing/slide sequence stable even when they are created together.
@@ -568,24 +749,75 @@ private fun queryDeviceImages(context: Context): List<PhotoAsset> {
         "${MediaStore.Images.Media._ID} DESC"
 
     // Con accesso parziale su Android 14, MediaStore restituisce solo gli elementi autorizzati.
-    return context.contentResolver.query(
+    val devicePhotos = context.contentResolver.query(
         collection,
         projection,
         null,
         null,
         sortOrder,
     )?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
         buildList {
             while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                add(
-                    PhotoAsset(
-                        id = id,
-                        uri = ContentUris.withAppendedId(collection, id),
-                    ),
-                )
+                add(cursor.toPhotoAsset(collection))
             }
         }
     }.orEmpty()
+
+    // Android can filter MediaStore results after a partial permission grant. Locally-created
+    // cuts are remembered separately so they remain available to this app in that situation.
+    val visibleUris = devicePhotos.associateBy { it.uri.toString() }
+    val generatedPhotos = GeneratedMediaRegistry.read(context).map { record ->
+        visibleUris[record.uri.toString()]
+            ?: queryPhotoByUri(context, record.uri)
+            ?: PhotoAsset(
+                id = record.uri.toString(),
+                uri = record.uri,
+                albumId = GeneratedAlbumId,
+                albumName = GeneratedAlbumName,
+                takenAtMillis = record.createdAt,
+            )
+    }
+
+    return (generatedPhotos + devicePhotos)
+        .distinctBy { it.uri }
+        .sortedByDescending { it.takenAtMillis }
+}
+
+private fun queryPhotoByUri(context: Context, uri: Uri): PhotoAsset? {
+    val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.DATE_TAKEN,
+        MediaStore.Images.Media.DATE_ADDED,
+        MediaStore.Images.Media.BUCKET_ID,
+        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+    )
+    return runCatching {
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.toPhotoAsset(MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            } else {
+                null
+            }
+        }
+    }.getOrNull()
+}
+
+private fun android.database.Cursor.toPhotoAsset(collection: Uri): PhotoAsset {
+    val id = getLong(getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+    val dateTaken = getLong(getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN))
+    val dateAdded = getLong(getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)) * 1_000L
+    val bucketId = getString(getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID))
+        ?.takeIf { it.isNotBlank() }
+        ?: "other"
+    val bucketName = getString(getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
+        ?.takeIf { it.isNotBlank() }
+        ?: "Altre foto"
+    val uri = ContentUris.withAppendedId(collection, id)
+    return PhotoAsset(
+        id = uri.toString(),
+        uri = uri,
+        albumId = bucketId,
+        albumName = bucketName,
+        takenAtMillis = dateTaken.takeIf { it > 0L } ?: dateAdded,
+    )
 }

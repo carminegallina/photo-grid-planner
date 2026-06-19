@@ -94,6 +94,7 @@ import com.photogridplanner.cutter.TemplateSlot
 import com.photogridplanner.cutter.TemplateSlotInput
 import com.photogridplanner.cutter.TileFormat
 import com.photogridplanner.image.ImageLoader
+import com.photogridplanner.ui.media.GeneratedMediaRegistry
 import com.photogridplanner.ui.media.PhotoLibraryPicker
 import com.photogridplanner.ui.media.PhotoSelectionMode
 import kotlin.math.abs
@@ -420,6 +421,14 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             }.onSuccess { cutResults ->
                 results = cutResults
                 resultMessage = doneMessage(cutResults.size)
+                scope.launch {
+                    runCatching {
+                        GeneratedMediaRegistry.remember(
+                            context = context,
+                            uris = cutResults.mapNotNull { it.uri },
+                        )
+                    }
+                }
             }.onFailure { error ->
                 resultMessage = error.message ?: "Esportazione non riuscita."
             }
@@ -456,6 +465,14 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             }.onSuccess { cutResults ->
                 results = cutResults
                 resultMessage = doneMessage(cutResults.size)
+                scope.launch {
+                    runCatching {
+                        GeneratedMediaRegistry.remember(
+                            context = context,
+                            uris = cutResults.mapNotNull { it.uri },
+                        )
+                    }
+                }
             }.onFailure { error ->
                 resultMessage = error.message ?: "Esportazione template non riuscita."
             }

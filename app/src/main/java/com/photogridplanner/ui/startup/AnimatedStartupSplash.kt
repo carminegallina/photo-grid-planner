@@ -91,7 +91,7 @@ fun AnimatedStartupSplash(
             VectorGridMark(
                 progress = progress.value,
                 modifier = Modifier
-                    .size(156.dp)
+                    .size(184.dp)
                     .graphicsLayer {
                         alpha = markAlpha.value
                         scaleX = markScale.value
@@ -123,7 +123,7 @@ private fun VectorGridMark(
         val gridInset = boardSize * 0.17f
         val gridGap = boardSize * 0.072f
         val cellSize = (boardSize - gridInset * 2f - gridGap * 2f) / 3f
-        val strokeWidth = (boardSize * 0.048f).coerceAtLeast(2f)
+        val strokeWidth = (boardSize * 0.032f).coerceAtLeast(2f)
         val cellCorner = cellSize * 0.20f
         val gridLeft = boardOffset.x + gridInset
         val gridTop = boardOffset.y + gridInset
