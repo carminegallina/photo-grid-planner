@@ -111,6 +111,7 @@ private const val MaxCarouselSlides = 5
 private const val MaxTransformScale = 5f
 private const val ZoomSensitivity = 2.4
 private const val PanSensitivity = 3.2f
+private const val TemplatePanFollowRatio = 0.92f
 
 private enum class CutterMode(val label: String) {
     Mosaic("Mosaico"),
@@ -1526,14 +1527,15 @@ private fun TemplateCropPreview(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var images by remember(template.id) { mutableStateOf<Map<String, ImageBitmap>>(emptyMap()) }
     val latestSlotUris by rememberUpdatedState(slotUris)
     val latestSlotTransforms by rememberUpdatedState(slotTransforms)
+    val latestImages by rememberUpdatedState(images)
     val horizontalScrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val selectedOutlineColor = MaterialTheme.colorScheme.primary
     val cutLineColor = MaterialTheme.colorScheme.primary
     val cutColumns = (outputWidth / TileFormat.Vertical.width).coerceAtLeast(1)
-    var images by remember(template.id) { mutableStateOf<Map<String, ImageBitmap>>(emptyMap()) }
 
     LaunchedEffect(slotUris, template.id) {
         val loaded = mutableMapOf<String, ImageBitmap>()
@@ -1623,21 +1625,22 @@ private fun TemplateCropPreview(
                                                 height = size.height.toFloat(),
                                             )
                                             val zoomFactor = zoom.toDouble().pow(ZoomSensitivity).toFloat()
-                                            val panX = if (slotRect.width == 0f) {
-                                                0f
+                                            val slotImage = latestImages[slot.id]
+                                            val panOffset = if (slotImage == null) {
+                                                Offset.Zero
                                             } else {
-                                                pan.x / slotRect.width * PanSensitivity
-                                            }
-                                            val panY = if (slotRect.height == 0f) {
-                                                0f
-                                            } else {
-                                                pan.y / slotRect.height * PanSensitivity
+                                                templatePanOffset(
+                                                    image = slotImage,
+                                                    slotRect = slotRect,
+                                                    transform = currentTransform,
+                                                    pan = pan,
+                                                )
                                             }
                                             val nextTransform = currentTransform.copy(
                                                 scale = (currentTransform.safeScale * zoomFactor)
                                                     .coerceIn(1f, MaxTransformScale),
-                                                offsetX = currentTransform.safeOffsetX + panX,
-                                                offsetY = currentTransform.safeOffsetY + panY,
+                                                offsetX = currentTransform.safeOffsetX + panOffset.x,
+                                                offsetY = currentTransform.safeOffsetY + panOffset.y,
                                             )
                                             currentTransform = nextTransform
                                             onSlotTransformChange(slot.id, nextTransform)
@@ -1816,6 +1819,35 @@ private fun DrawScope.drawTemplateSlotHint(slotRect: Rect) {
         drawText(label, centerX, blockTop - labelMetrics.ascent, paint)
         drawText(detail, centerX, blockTop + labelHeight + gap - detailMetrics.ascent, detailPaint)
     }
+}
+
+private fun templatePanOffset(
+    image: ImageBitmap,
+    slotRect: Rect,
+    transform: MosaicTransform,
+    pan: Offset,
+): Offset {
+    val sourceWidth = image.width.toFloat().coerceAtLeast(1f)
+    val sourceHeight = image.height.toFloat().coerceAtLeast(1f)
+    val slotWidth = slotRect.width.coerceAtLeast(1f)
+    val slotHeight = slotRect.height.coerceAtLeast(1f)
+    val baseScale = max(slotWidth / sourceWidth, slotHeight / sourceHeight)
+    val drawScale = baseScale * transform.safeScale
+    val drawWidth = sourceWidth * drawScale + 2f
+    val drawHeight = sourceHeight * drawScale + 2f
+    val extraX = max(drawWidth - slotWidth, 0f)
+    val extraY = max(drawHeight - slotHeight, 0f)
+
+    fun axisDelta(panPx: Float, extraPx: Float, slotPx: Float): Float {
+        if (extraPx <= 1f) return 0f
+        val denominator = max(extraPx, slotPx * 0.45f)
+        return panPx * 2f * TemplatePanFollowRatio / denominator
+    }
+
+    return Offset(
+        x = axisDelta(pan.x, extraX, slotWidth),
+        y = axisDelta(pan.y, extraY, slotHeight),
+    )
 }
 
 private fun DrawScope.drawTemplateSlotImage(
