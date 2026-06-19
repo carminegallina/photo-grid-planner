@@ -49,16 +49,18 @@ object TemplateCutter {
             backgroundColorArgb = backgroundColorArgb,
         )
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val sessionTakenAt = System.currentTimeMillis()
         try {
             if (slideCount == 1) {
                 return@withContext listOf(
                     saveBitmap(
                         context = context,
                         bitmap = rendered,
-                        displayName = "${namePrefix}_${timestamp}_${template.id}_01",
+                        displayName = "01_${namePrefix}_${timestamp}_${template.id}",
                         row = 0,
                         column = 0,
                         publishIndex = 1,
+                        takenAtMillis = sessionTakenAt,
                         destination = destination,
                     ),
                 )
@@ -66,8 +68,9 @@ object TemplateCutter {
 
             val slideWidth = TileFormat.Vertical.width
             val slideHeight = TileFormat.Vertical.height
-            val results = mutableListOf<CutTileResult>()
-            for (slide in 0 until slideCount) {
+            val results = MutableList<CutTileResult?>(slideCount) { null }
+            // Save the first carousel slide last so chronological galleries show it first.
+            for (slide in (slideCount - 1) downTo 0) {
                 val bitmap = Bitmap.createBitmap(
                     rendered,
                     slide * slideWidth,
@@ -76,20 +79,21 @@ object TemplateCutter {
                     slideHeight,
                 )
                 try {
-                    results += saveBitmap(
+                    results[slide] = saveBitmap(
                         context = context,
                         bitmap = bitmap,
-                        displayName = "${namePrefix}_${timestamp}_${template.id}_${(slide + 1).toString().padStart(2, '0')}",
+                        displayName = "${(slide + 1).toString().padStart(2, '0')}_${namePrefix}_${timestamp}_${template.id}",
                         row = 0,
                         column = slide,
                         publishIndex = slide + 1,
+                        takenAtMillis = sessionTakenAt - (slide * 1_000L),
                         destination = destination,
                     )
                 } finally {
                     bitmap.recycle()
                 }
             }
-            results
+            results.filterNotNull()
         } finally {
             rendered.recycle()
         }
@@ -193,10 +197,11 @@ object TemplateCutter {
         row: Int,
         column: Int,
         publishIndex: Int,
+        takenAtMillis: Long,
         destination: SaveDestination,
     ): CutTileResult {
         return if (destination == SaveDestination.Gallery && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            saveToGallery(context, bitmap, displayName, row, column, publishIndex)
+            saveToGallery(context, bitmap, displayName, row, column, publishIndex, takenAtMillis)
         } else {
             saveToAppFolder(context, bitmap, displayName, row, column, publishIndex)
         }
@@ -209,12 +214,15 @@ object TemplateCutter {
         row: Int,
         column: Int,
         publishIndex: Int,
+        takenAtMillis: Long,
     ): CutTileResult {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.$OutputExtension")
             put(MediaStore.Images.Media.MIME_TYPE, OutputMimeType)
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/PhotoGridPlanner")
+            put(MediaStore.Images.Media.DATE_TAKEN, takenAtMillis)
+            put(MediaStore.Images.Media.DATE_MODIFIED, takenAtMillis / 1_000L)
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)

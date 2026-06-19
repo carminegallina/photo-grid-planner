@@ -362,6 +362,7 @@ private val EnglishStrings = mapOf(
 
     "Libreria foto" to "Photo library",
     "Importa nella griglia" to "Import to grid",
+    "Tieni premuto e trascina per selezionare più foto" to "Press and drag to select multiple photos",
     "Accesso parziale" to "Partial access",
     "Stai vedendo solo le immagini che hai autorizzato. Puoi modificarle quando vuoi." to
         "You are only seeing the images you allowed. You can change them at any time.",

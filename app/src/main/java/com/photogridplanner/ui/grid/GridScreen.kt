@@ -200,7 +200,10 @@ fun GridScreen(
             count = pendingImportUris.size,
             onDismiss = { pendingImportUris = emptyList() },
             onMosaic = {
-                viewModel.addImages(pendingImportUris)
+                // The gallery presents generated mosaic tiles in publishing order.
+                // The grid itself shows the most recent post first, so reverse them here
+                // to rebuild the final profile composition immediately.
+                viewModel.addImages(pendingImportUris.reversed())
                 pendingImportUris = emptyList()
             },
             onCarousel = {

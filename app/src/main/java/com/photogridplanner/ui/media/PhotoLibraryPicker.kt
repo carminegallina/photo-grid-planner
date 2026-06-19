@@ -21,6 +21,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,12 +58,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,6 +75,7 @@ import androidx.core.content.ContextCompat
 import com.photogridplanner.ui.components.AsyncUriImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.floor
 
 enum class PhotoSelectionMode {
     Single,
@@ -235,6 +241,16 @@ private fun PhotoLibraryContent(
     onManageAccess: () -> Unit,
     onTogglePhoto: (Uri) -> Unit,
 ) {
+    val density = LocalDensity.current
+    var cellSizePx by remember { mutableIntStateOf(0) }
+    val cellStridePx = cellSizePx + with(density) { 6.dp.toPx() }
+
+    fun addToSelection(uri: Uri) {
+        if (mode == PhotoSelectionMode.Multiple && uri !in selected && selected.size < maxSelection) {
+            onTogglePhoto(uri)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,6 +293,11 @@ private fun PhotoLibraryContent(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            LocalizedText(
+                text = "Tieni premuto e trascina per selezionare più foto",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         when {
@@ -299,12 +320,27 @@ private fun PhotoLibraryContent(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(photos, key = { it.id }) { photo ->
+                items(
+                    items = photos,
+                    key = { it.id },
+                ) { photo ->
+                    val index = photos.indexOf(photo)
                     val isSelected = photo.uri in selected
                     PhotoCell(
                         photo = photo,
+                        index = index,
+                        photoCount = photos.size,
                         selected = isSelected,
+                        dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
+                        cellStridePx = cellStridePx,
+                        onCellSizeChanged = { size -> cellSizePx = size },
                         onClick = { onTogglePhoto(photo.uri) },
+                        onAddToSelection = { addToSelection(photo.uri) },
+                        onDragSelect = { targetIndex ->
+                            photos.getOrNull(targetIndex)?.let { target ->
+                                addToSelection(target.uri)
+                            }
+                        },
                     )
                 }
             }
@@ -315,13 +351,54 @@ private fun PhotoLibraryContent(
 @Composable
 private fun PhotoCell(
     photo: PhotoAsset,
+    index: Int,
+    photoCount: Int,
     selected: Boolean,
+    dragSelectionEnabled: Boolean,
+    cellStridePx: Float,
+    onCellSizeChanged: (Int) -> Unit,
     onClick: () -> Unit,
+    onAddToSelection: () -> Unit,
+    onDragSelect: (Int) -> Unit,
 ) {
+    val startColumn = index % PhotoGridColumns
+    val startRow = index / PhotoGridColumns
+    val currentAddToSelection by rememberUpdatedState(onAddToSelection)
+    val currentDragSelect by rememberUpdatedState(onDragSelect)
     Box(
         modifier = Modifier
             .aspectRatio(1f)
+            .onSizeChanged { size ->
+                if (size.width > 0) onCellSizeChanged(size.width)
+            }
             .clip(RoundedCornerShape(8.dp))
+            // Long press starts additive selection; dragging across tiles keeps adding them.
+            .then(
+                if (dragSelectionEnabled) {
+                    Modifier.pointerInput(index, photoCount, cellStridePx) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { currentAddToSelection() },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                if (cellStridePx <= 0f) return@detectDragGesturesAfterLongPress
+
+                                val column = (
+                                    startColumn + floor(change.position.x / cellStridePx).toInt()
+                                    ).coerceIn(0, PhotoGridColumns - 1)
+                                val row = (
+                                    startRow + floor(change.position.y / cellStridePx).toInt()
+                                    ).coerceAtLeast(0)
+                                val targetIndex = row * PhotoGridColumns + column
+                                if (targetIndex in 0 until photoCount) {
+                                    currentDragSelect(targetIndex)
+                                }
+                            },
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            )
             .clickable(onClick = onClick),
     ) {
         AsyncUriImage(
@@ -349,6 +426,8 @@ private fun PhotoCell(
         }
     }
 }
+
+private const val PhotoGridColumns = 3
 
 @Composable
 private fun EmptyPhotoLibrary() {

@@ -12,7 +12,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -36,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,6 +55,7 @@ import com.photogridplanner.ui.grid.GridScreen
 import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.appStringsFor
 import com.photogridplanner.ui.settings.SettingsScreen
+import com.photogridplanner.ui.startup.AnimatedStartupSplash
 import com.photogridplanner.ui.tutorial.AppTutorialDialog
 import com.photogridplanner.viewmodel.PlannerViewModel
 
@@ -78,31 +82,33 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
     var currentDestination by rememberSaveable { mutableStateOf(Destination.Grid) }
     var tutorialDismissedThisLaunch by rememberSaveable { mutableStateOf(false) }
     var forceTutorial by rememberSaveable { mutableStateOf(false) }
+    var showStartupAnimation by remember { mutableStateOf(true) }
 
     CompositionLocalProvider(
         LocalAppStrings provides appStringsFor(state.language),
     ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            bottomBar = {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
-                    tonalElevation = 0.dp,
-                ) {
-                    NavigationBar(
-                        modifier = Modifier.height(66.dp),
-                        containerColor = Color.Transparent,
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                bottomBar = {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                         contentColor = MaterialTheme.colorScheme.onSurface,
+                        shape = RoundedCornerShape(28.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
                         tonalElevation = 0.dp,
                     ) {
+                        NavigationBar(
+                            modifier = Modifier.height(66.dp),
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            tonalElevation = 0.dp,
+                        ) {
                         AppNavItem(
                             selected = currentDestination == Destination.Grid,
                             onClick = { currentDestination = Destination.Grid },
@@ -133,31 +139,31 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
                             icon = Icons.Rounded.Settings,
                             label = Destination.Settings.label,
                         )
+                        }
                     }
-                }
-            },
-        ) { padding ->
-            AnimatedContent(
-                targetState = currentDestination,
-                label = "screen_transition",
-                transitionSpec = {
-                    val direction = if (targetState.index > initialState.index) 1 else -1
-                    (
-                        fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
-                            slideInHorizontally(
-                                animationSpec = tween(320, easing = FastOutSlowInEasing),
-                                initialOffsetX = { fullWidth -> fullWidth / 9 * direction },
-                            )
-                        ).togetherWith(
-                            fadeOut(animationSpec = tween(190, easing = FastOutSlowInEasing)) +
-                                slideOutHorizontally(
-                                    animationSpec = tween(260, easing = FastOutSlowInEasing),
-                                    targetOffsetX = { fullWidth -> -fullWidth / 12 * direction },
-                                ),
-                        ).using(SizeTransform(clip = false))
                 },
-            ) { destination ->
-                when (destination) {
+            ) { padding ->
+                AnimatedContent(
+                    targetState = currentDestination,
+                    label = "screen_transition",
+                    transitionSpec = {
+                        val direction = if (targetState.index > initialState.index) 1 else -1
+                        (
+                            fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
+                                slideInHorizontally(
+                                    animationSpec = tween(320, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { fullWidth -> fullWidth / 9 * direction },
+                                )
+                            ).togetherWith(
+                                fadeOut(animationSpec = tween(190, easing = FastOutSlowInEasing)) +
+                                    slideOutHorizontally(
+                                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> -fullWidth / 12 * direction },
+                                    ),
+                            ).using(SizeTransform(clip = false))
+                    },
+                ) { destination ->
+                    when (destination) {
                     Destination.Grid -> GridScreen(
                         state = state,
                         viewModel = viewModel,
@@ -185,20 +191,25 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
                         modifier = Modifier.padding(padding),
                         onShowTutorial = { forceTutorial = true },
                     )
+                    }
                 }
             }
-        }
 
-        if ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial) {
-            AppTutorialDialog(
-                onClose = { dontShowAgain ->
-                    tutorialDismissedThisLaunch = true
-                    forceTutorial = false
-                    if (dontShowAgain) {
-                        viewModel.setShowTutorialOnLaunch(false)
-                    }
-                },
-            )
+            if (!showStartupAnimation && ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial)) {
+                AppTutorialDialog(
+                    onClose = { dontShowAgain ->
+                        tutorialDismissedThisLaunch = true
+                        forceTutorial = false
+                        if (dontShowAgain) {
+                            viewModel.setShowTutorialOnLaunch(false)
+                        }
+                    },
+                )
+            }
+
+            if (showStartupAnimation) {
+                AnimatedStartupSplash(onFinished = { showStartupAnimation = false })
+            }
         }
     }
 }

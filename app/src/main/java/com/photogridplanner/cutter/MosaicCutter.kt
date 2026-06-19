@@ -59,6 +59,7 @@ object MosaicCutter {
             profileSideInset = if (usesProfileSafeArea) format.profileSideInset else 0,
         )
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val sessionTakenAt = System.currentTimeMillis()
         val cutPlans = cutCoordinates(spec, exportOrder).mapIndexed { index, coordinate ->
             CutPlan(
                 publishIndex = index + 1,
@@ -66,11 +67,9 @@ object MosaicCutter {
                 column = coordinate.second,
             )
         }
-        val savePlans = if (exportOrder == CutExportOrder.ProfilePublish) {
-            cutPlans.asReversed()
-        } else {
-            cutPlans
-        }
+        // Saving in reverse means the first file in the intended selection order is
+        // also the newest media item in galleries that sort by creation time.
+        val savePlans = cutPlans.asReversed()
 
         try {
             val savedResults = MutableList<CutTileResult?>(cutPlans.size) { null }
@@ -87,7 +86,7 @@ object MosaicCutter {
                     )
                 }
                 try {
-                    val displayName = "${namePrefix}_${timestamp}_${spec.label}_${plan.publishIndex.toString().padStart(2, '0')}"
+                    val displayName = "${plan.publishIndex.toString().padStart(2, '0')}_${namePrefix}_${timestamp}_${spec.label}"
                     savedResults[plan.publishIndex - 1] = saveTile(
                         context = context,
                         bitmap = tile,
@@ -95,6 +94,7 @@ object MosaicCutter {
                         row = plan.row,
                         column = plan.column,
                         publishIndex = plan.publishIndex,
+                        takenAtMillis = sessionTakenAt - ((plan.publishIndex - 1) * 1_000L),
                         destination = destination,
                     )
                 } finally {
@@ -220,10 +220,11 @@ object MosaicCutter {
         row: Int,
         column: Int,
         publishIndex: Int,
+        takenAtMillis: Long,
         destination: SaveDestination,
     ): CutTileResult {
         return if (destination == SaveDestination.Gallery && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            saveToGallery(context, bitmap, displayName, row, column, publishIndex)
+            saveToGallery(context, bitmap, displayName, row, column, publishIndex, takenAtMillis)
         } else {
             saveToAppFolder(context, bitmap, displayName, row, column, publishIndex)
         }
@@ -236,12 +237,15 @@ object MosaicCutter {
         row: Int,
         column: Int,
         publishIndex: Int,
+        takenAtMillis: Long,
     ): CutTileResult {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.$OutputExtension")
             put(MediaStore.Images.Media.MIME_TYPE, OutputMimeType)
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/PhotoGridPlanner")
+            put(MediaStore.Images.Media.DATE_TAKEN, takenAtMillis)
+            put(MediaStore.Images.Media.DATE_MODIFIED, takenAtMillis / 1_000L)
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)

@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+val StartupBackdrop = Color(0xFF08090B)
+
 private val DarkScheme = darkColorScheme(
     primary = Color(0xFF9FE8C0),
     onPrimary = Color(0xFF062016),
@@ -19,7 +21,7 @@ private val DarkScheme = darkColorScheme(
     onSecondary = Color(0xFF101638),
     tertiary = Color(0xFFFF8A8A),
     onTertiary = Color(0xFF341010),
-    background = Color(0xFF08090B),
+    background = StartupBackdrop,
     onBackground = Color(0xFFF4F6F4),
     surface = Color(0xFF101216),
     onSurface = Color(0xFFECEFED),
