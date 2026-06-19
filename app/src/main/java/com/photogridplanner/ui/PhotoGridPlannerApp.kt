@@ -2,6 +2,7 @@ package com.photogridplanner.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -131,16 +132,16 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
             transitionSpec = {
                 val direction = if (targetState.index > initialState.index) 1 else -1
                 (
-                    fadeIn(animationSpec = tween(160)) +
+                    fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
                         slideInHorizontally(
-                            animationSpec = tween(220),
-                            initialOffsetX = { fullWidth -> fullWidth / 7 * direction },
+                            animationSpec = tween(320, easing = FastOutSlowInEasing),
+                            initialOffsetX = { fullWidth -> fullWidth / 9 * direction },
                         )
                     ).togetherWith(
-                        fadeOut(animationSpec = tween(120)) +
+                        fadeOut(animationSpec = tween(190, easing = FastOutSlowInEasing)) +
                             slideOutHorizontally(
-                                animationSpec = tween(180),
-                                targetOffsetX = { fullWidth -> -fullWidth / 10 * direction },
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                targetOffsetX = { fullWidth -> -fullWidth / 12 * direction },
                             ),
                     ).using(SizeTransform(clip = false))
             },

@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.cutter
 
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
@@ -71,6 +73,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -96,6 +99,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -1567,9 +1571,33 @@ private fun TemplateCropPreview(
                             if (slot == null) {
                                 return@awaitEachGesture
                             }
+                            val hasImage = latestSlotUris[slot.id] != null
+                            if (!hasImage) {
+                                val touchSlop = viewConfiguration.touchSlop
+                                var moved = false
+                                var cancelled = false
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    val change = event.changes.firstOrNull { it.id == down.id }
+                                        ?: event.changes.firstOrNull()
+                                        ?: break
+                                    val delta = change.position - down.position
+                                    if (change.isConsumed) {
+                                        cancelled = true
+                                    }
+                                    if (abs(delta.x) > touchSlop || abs(delta.y) > touchSlop) {
+                                        moved = true
+                                    }
+                                    if (!change.pressed) break
+                                }
+                                if (!moved && !cancelled) {
+                                    onSlotClick(slot.id)
+                                }
+                                return@awaitEachGesture
+                            }
+
                             down.consume()
                             onGestureActiveChange(true)
-                            val hasImage = latestSlotUris[slot.id] != null
                             var gestureChanged = false
                             var currentTransform = latestSlotTransforms[slot.id] ?: MosaicTransform()
                             try {
@@ -1633,9 +1661,12 @@ private fun TemplateCropPreview(
                         topLeft = Offset(slotRect.left, slotRect.top),
                         size = Size(slotRect.width, slotRect.height),
                     )
-                    images[slot.id]?.let { image ->
+                    val slotImage = images[slot.id]
+                    if (slotImage == null) {
+                        drawTemplateSlotHint(slotRect)
+                    } else {
                         drawTemplateSlotImage(
-                            image = image,
+                            image = slotImage,
                             transform = slotTransforms[slot.id] ?: MosaicTransform(),
                             slotRect = slotRect,
                         )
@@ -1752,6 +1783,38 @@ private fun DrawScope.drawTemplateCutLines(
             strokeWidth = 2.dp.toPx(),
             cap = StrokeCap.Square,
         )
+    }
+}
+
+private fun DrawScope.drawTemplateSlotHint(slotRect: Rect) {
+    val label = "Tocca"
+    val detail = "per inserire"
+    val textSize = min(slotRect.width * 0.12f, slotRect.height * 0.18f)
+        .coerceIn(9.dp.toPx(), 16.dp.toPx())
+    val centerX = slotRect.left + slotRect.width / 2f
+    val centerY = slotRect.top + slotRect.height / 2f
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(230, 255, 255, 255)
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        this.textSize = textSize
+    }
+    val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(185, 255, 255, 255)
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        this.textSize = textSize * 0.82f
+    }
+    val labelMetrics = paint.fontMetrics
+    val detailMetrics = detailPaint.fontMetrics
+    val gap = 2.dp.toPx()
+    val labelHeight = labelMetrics.descent - labelMetrics.ascent
+    val detailHeight = detailMetrics.descent - detailMetrics.ascent
+    val blockTop = centerY - (labelHeight + gap + detailHeight) / 2f
+
+    drawContext.canvas.nativeCanvas.apply {
+        drawText(label, centerX, blockTop - labelMetrics.ascent, paint)
+        drawText(detail, centerX, blockTop + labelHeight + gap - detailMetrics.ascent, detailPaint)
     }
 }
 

@@ -2,6 +2,7 @@ package com.photogridplanner.ui.analysis
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -138,8 +139,13 @@ fun FeedAnalysisScreen(
             targetState = viewState,
             label = "analysis_state",
             transitionSpec = {
-                (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.98f))
-                    .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.98f))
+                (
+                    fadeIn(tween(260, easing = FastOutSlowInEasing)) +
+                        scaleIn(tween(260, easing = FastOutSlowInEasing), initialScale = 0.985f)
+                    ).togetherWith(
+                        fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                            scaleOut(tween(180, easing = FastOutSlowInEasing), targetScale = 0.985f),
+                    )
             },
         ) { stateKey ->
             when (stateKey) {

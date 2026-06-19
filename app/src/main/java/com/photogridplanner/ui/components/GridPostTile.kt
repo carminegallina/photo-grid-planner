@@ -1,6 +1,7 @@
 package com.photogridplanner.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -81,8 +82,10 @@ fun GridPostTile(
 
         AnimatedVisibility(
             visible = post.isCarousel,
-            enter = fadeIn(tween(140)) + scaleIn(tween(140), initialScale = 0.86f),
-            exit = fadeOut(tween(100)) + scaleOut(tween(100), targetScale = 0.86f),
+            enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                scaleIn(tween(220, easing = FastOutSlowInEasing), initialScale = 0.9f),
+            exit = fadeOut(tween(150, easing = FastOutSlowInEasing)) +
+                scaleOut(tween(150, easing = FastOutSlowInEasing), targetScale = 0.9f),
             modifier = Modifier.align(Alignment.TopEnd),
         ) {
             Surface(
@@ -113,8 +116,8 @@ fun GridPostTile(
 
         AnimatedVisibility(
             visible = post.hidden,
-            enter = fadeIn(tween(160)),
-            exit = fadeOut(tween(120)),
+            enter = fadeIn(tween(220, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(160, easing = FastOutSlowInEasing)),
         ) {
             Box(
                 modifier = Modifier
@@ -124,8 +127,10 @@ fun GridPostTile(
         }
         AnimatedVisibility(
             visible = post.hidden,
-            enter = fadeIn(tween(160)) + scaleIn(tween(160), initialScale = 0.92f),
-            exit = fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.92f),
+            enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                scaleIn(tween(220, easing = FastOutSlowInEasing), initialScale = 0.94f),
+            exit = fadeOut(tween(160, easing = FastOutSlowInEasing)) +
+                scaleOut(tween(160, easing = FastOutSlowInEasing), targetScale = 0.94f),
             modifier = Modifier.align(Alignment.Center),
         ) {
             Surface(
