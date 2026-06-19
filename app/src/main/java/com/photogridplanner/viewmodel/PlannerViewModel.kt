@@ -13,6 +13,7 @@ import com.photogridplanner.data.PlannerRepository
 import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PostKind
 import com.photogridplanner.data.PreviewMode
+import com.photogridplanner.notifications.PublicationReminderScheduler
 import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,14 @@ import kotlinx.coroutines.launch
 
 class PlannerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = PlannerRepository(application.applicationContext)
+
+    init {
+        viewModelScope.launch {
+            repository.data.collect { data ->
+                PublicationReminderScheduler.sync(application.applicationContext, data)
+            }
+        }
+    }
 
     val state: StateFlow<PlannerData> = repository.data.stateIn(
         scope = viewModelScope,
@@ -97,6 +106,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun setShowTutorialOnLaunch(show: Boolean) {
         viewModelScope.launch { repository.setShowTutorialOnLaunch(show) }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.setNotificationsEnabled(enabled) }
     }
 
     fun setLanguage(language: AppLanguage) {

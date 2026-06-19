@@ -364,6 +364,11 @@ private val EnglishStrings = mapOf(
         "If you enter a name, the type is deselected. If you choose a type, the custom name is cleared.",
 
     "Libreria foto" to "Photo library",
+    "Notifiche" to "Notifications",
+    "Promemoria pubblicazione" to "Publishing reminders",
+    "Ricevi un avviso all'orario scelto nel calendario quando ci sono post pianificati per la giornata." to
+        "Receive a reminder at the time selected in the calendar when posts are planned for the day.",
+    "Permesso notifiche non concesso" to "Notification permission not granted",
     "Importa nella griglia" to "Import to grid",
     "Tieni premuto e trascina per selezionare piu foto" to "Press and drag to select multiple photos",
     "Tutte le foto" to "All photos",

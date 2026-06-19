@@ -3,6 +3,9 @@ package com.photogridplanner.ui.settings
 import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.LocalizedText
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.FilterChip
@@ -41,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.photogridplanner.data.AppLanguage
 import com.photogridplanner.data.PlannerData
 import com.photogridplanner.export.ProjectExporter
@@ -60,6 +65,15 @@ fun SettingsScreen(
     val context = LocalContext.current
     val strings = LocalAppStrings.current
     val scope = rememberCoroutineScope()
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            viewModel.setNotificationsEnabled(granted)
+            if (!granted) {
+                Toast.makeText(context, strings.t("Permesso notifiche non concesso"), Toast.LENGTH_SHORT).show()
+            }
+        },
+    )
     val zipExporter = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
         onResult = { uri ->
@@ -127,6 +141,43 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setShowHiddenPosts,
                 )
             }
+        }
+
+        SettingsPanel(title = "Notifiche") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Rounded.NotificationsActive, contentDescription = null)
+                    LocalizedText("Promemoria pubblicazione")
+                }
+                Switch(
+                    checked = state.notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        val notificationPermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            ) == PackageManager.PERMISSION_GRANTED
+                        if (enabled && !notificationPermissionGranted) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            viewModel.setNotificationsEnabled(enabled)
+                        }
+                    },
+                )
+            }
+            LocalizedText(
+                text = "Ricevi un avviso all'orario scelto nel calendario quando ci sono post pianificati per la giornata.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         SettingsPanel(title = "Tutorial") {
