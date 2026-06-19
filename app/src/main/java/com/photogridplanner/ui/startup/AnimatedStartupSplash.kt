@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.startup
 
+import android.app.Activity
+import android.graphics.Color as AndroidColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,13 +29,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import com.photogridplanner.ui.theme.StartupBackdrop
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val MarkBackground = Color(0xFFF8F7F4)
 private val MarkStroke = Color(0xFF202124)
 private val MarkGradient = listOf(
     Color(0xFFFFB000),
@@ -54,44 +57,67 @@ fun AnimatedStartupSplash(
     val markScale = remember { Animatable(0.84f) }
     val markAlpha = remember { Animatable(0f) }
     val markLift = remember { Animatable(18f) }
+    val view = LocalView.current
+
+    DisposableEffect(view) {
+        val window = (view.context as? Activity)?.window
+        window?.statusBarColor = AndroidColor.WHITE
+        window?.navigationBarColor = AndroidColor.WHITE
+        window?.let { target ->
+            WindowInsetsControllerCompat(target, view).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
+        }
+        onDispose {
+            window?.statusBarColor = AndroidColor.rgb(13, 15, 20)
+            window?.navigationBarColor = AndroidColor.rgb(13, 15, 20)
+            window?.let { target ->
+                WindowInsetsControllerCompat(target, view).apply {
+                    isAppearanceLightStatusBars = false
+                    isAppearanceLightNavigationBars = false
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         coroutineScope {
             launch {
-                progress.animateTo(1f, animationSpec = tween(880, easing = FastOutSlowInEasing))
+                progress.animateTo(1f, animationSpec = tween(1_400, easing = FastOutSlowInEasing))
             }
             launch {
-                markAlpha.animateTo(1f, animationSpec = tween(190, easing = FastOutSlowInEasing))
+                markAlpha.animateTo(1f, animationSpec = tween(240, easing = FastOutSlowInEasing))
             }
             launch {
-                markScale.animateTo(1.025f, animationSpec = tween(540, easing = FastOutSlowInEasing))
-                markScale.animateTo(1f, animationSpec = tween(260, easing = FastOutSlowInEasing))
+                markScale.animateTo(1.025f, animationSpec = tween(800, easing = FastOutSlowInEasing))
+                markScale.animateTo(1f, animationSpec = tween(380, easing = FastOutSlowInEasing))
             }
             launch {
-                markLift.animateTo(0f, animationSpec = tween(500, easing = FastOutSlowInEasing))
+                markLift.animateTo(0f, animationSpec = tween(700, easing = FastOutSlowInEasing))
             }
         }
-        delay(160)
+        delay(280)
         visible = false
-        delay(220)
+        delay(280)
         onFinished()
     }
 
     AnimatedVisibility(
         visible = visible,
-        exit = fadeOut(tween(180, easing = FastOutSlowInEasing)) +
-            scaleOut(targetScale = 1.015f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
+        exit = fadeOut(tween(240, easing = FastOutSlowInEasing)) +
+            scaleOut(targetScale = 1.015f, animationSpec = tween(260, easing = FastOutSlowInEasing)),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(StartupBackdrop),
+                .background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             VectorGridMark(
                 progress = progress.value,
                 modifier = Modifier
-                    .size(184.dp)
+                    .size(220.dp)
                     .graphicsLayer {
                         alpha = markAlpha.value
                         scaleX = markScale.value
@@ -109,24 +135,14 @@ private fun VectorGridMark(
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
-        val boardInset = size.minDimension * 0.03f
-        val boardSize = size.minDimension - boardInset * 2f
-        val boardCorner = boardSize * 0.23f
-        val boardOffset = Offset(boardInset, boardInset)
-        drawRoundRect(
-            color = MarkBackground,
-            topLeft = boardOffset,
-            size = Size(boardSize, boardSize),
-            cornerRadius = CornerRadius(boardCorner, boardCorner),
-        )
-
-        val gridInset = boardSize * 0.17f
-        val gridGap = boardSize * 0.072f
-        val cellSize = (boardSize - gridInset * 2f - gridGap * 2f) / 3f
-        val strokeWidth = (boardSize * 0.032f).coerceAtLeast(2f)
+        val markSize = size.minDimension
+        val gridInset = markSize * 0.08f
+        val gridGap = markSize * 0.075f
+        val cellSize = (markSize - gridInset * 2f - gridGap * 2f) / 3f
+        val strokeWidth = (markSize * 0.028f).coerceAtLeast(2f)
         val cellCorner = cellSize * 0.20f
-        val gridLeft = boardOffset.x + gridInset
-        val gridTop = boardOffset.y + gridInset
+        val gridLeft = (size.width - markSize) / 2f + gridInset
+        val gridTop = (size.height - markSize) / 2f + gridInset
 
         repeat(9) { index ->
             val row = index / 3
