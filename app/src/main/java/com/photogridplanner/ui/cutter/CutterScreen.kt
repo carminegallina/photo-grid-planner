@@ -6,14 +6,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -491,16 +483,8 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             },
         )
 
-        AnimatedContent(
-            targetState = mode,
-            label = "cutter_mode",
-            transitionSpec = {
-                (fadeIn(tween(160)) + scaleIn(tween(160), initialScale = 0.98f))
-                    .togetherWith(fadeOut(tween(110)) + scaleOut(tween(110), targetScale = 0.98f))
-            },
-        ) { activeMode ->
-            when (activeMode) {
-                CutterMode.Mosaic -> {
+        when (mode) {
+            CutterMode.Mosaic -> {
                 val spec = MosaicSpec(
                     columns = columns.coerceIn(1, MaxMosaicColumns),
                     rows = rows.coerceIn(1, MaxMosaicRows),
@@ -572,7 +556,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-                CutterMode.SinglePost -> {
+            CutterMode.SinglePost -> {
                 val spec = MosaicSpec(columns = 1, rows = 1)
                 val transform = transformFor(CutterMode.SinglePost)
                 val frame = frameOptions(postFrameEnabled, postFramePercent)
@@ -687,7 +671,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-                CutterMode.Carousel -> {
+            CutterMode.Carousel -> {
                 val spec = MosaicSpec(columns = carouselSlides.coerceIn(2, MaxCarouselSlides), rows = 1)
                 val transform = transformFor(CutterMode.Carousel)
                 val carouselTemplateOptions = carouselTemplates(spec.columns)
@@ -795,7 +779,6 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                         CutButtonContent(isCutting = isCutting, idleText = "Esporta carosello")
                     }
                 }
-                }
             }
         }
 
@@ -858,7 +841,6 @@ private fun FrameControls(
     onThicknessChange: (Float) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
@@ -916,7 +898,6 @@ private fun MosaicControls(
     onRowsChange: (Int) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
@@ -952,7 +933,6 @@ private fun CarouselControls(
     onSlidesChange: (Int) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
@@ -994,7 +974,6 @@ private fun TemplateWorkflow(
     onGestureActiveChange: (Boolean) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
