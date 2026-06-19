@@ -36,18 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.photogridplanner.data.DefaultPlaceholderColor
 import com.photogridplanner.data.GridPost
+import com.photogridplanner.data.PlaceholderPresetColors
 import com.photogridplanner.data.PostKind
-
-private val PlaceholderPalette = listOf(
-    DefaultPlaceholderColor,
-    0xFF5E6472.toInt(),
-    0xFF7D7461.toInt(),
-    0xFF6F7F72.toInt(),
-    0xFF4B6178.toInt(),
-    0xFF8A6F76.toInt(),
-)
 
 @Composable
 fun GridPostTile(
@@ -183,7 +174,7 @@ fun GridPostTile(
                                 modifier = Modifier.padding(top = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                PlaceholderPalette.forEach { color ->
+                                PlaceholderPresetColors.forEach { color ->
                                     Surface(
                                         modifier = Modifier
                                             .padding(end = 8.dp)

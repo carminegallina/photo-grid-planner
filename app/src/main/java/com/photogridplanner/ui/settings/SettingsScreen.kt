@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
@@ -48,6 +50,7 @@ fun SettingsScreen(
     state: PlannerData,
     viewModel: PlannerViewModel,
     modifier: Modifier = Modifier,
+    onShowTutorial: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -116,6 +119,50 @@ fun SettingsScreen(
                 Switch(
                     checked = state.showHiddenPosts,
                     onCheckedChange = viewModel::setShowHiddenPosts,
+                )
+            }
+        }
+
+        SettingsPanel(title = "Tutorial") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Rounded.Info, contentDescription = null)
+                    Text("Mostra tutorial all'avvio")
+                }
+                Switch(
+                    checked = state.showTutorialOnLaunch,
+                    onCheckedChange = viewModel::setShowTutorialOnLaunch,
+                )
+            }
+            OutlinedButton(onClick = onShowTutorial) {
+                Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text("Apri tutorial")
+            }
+        }
+
+        SettingsPanel(title = "Privacy") {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "L'app richiede l'accesso alla libreria fotografica per permetterti di visualizzare, selezionare, organizzare, tagliare e pianificare le immagini nella griglia. Le foto restano sul dispositivo e vengono elaborate localmente. Nessuna immagine viene caricata online o condivisa con terze parti senza una tua azione esplicita.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

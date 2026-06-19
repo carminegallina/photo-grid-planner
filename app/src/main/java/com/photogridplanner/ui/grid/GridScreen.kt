@@ -1,8 +1,5 @@
 package com.photogridplanner.ui.grid
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -79,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.photogridplanner.data.GridPost
 import com.photogridplanner.data.PlannerData
+import com.photogridplanner.data.PlaceholderPresetColors
 import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PreviewMode
 import com.photogridplanner.data.SavedLayout
@@ -86,6 +84,8 @@ import com.photogridplanner.data.PostKind
 import com.photogridplanner.ui.components.AsyncUriImage
 import com.photogridplanner.ui.components.FullScreenPreview
 import com.photogridplanner.ui.components.GridPostTile
+import com.photogridplanner.ui.media.PhotoLibraryPicker
+import com.photogridplanner.ui.media.PhotoSelectionMode
 import com.photogridplanner.viewmodel.PlannerViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -106,21 +106,7 @@ fun GridScreen(
     var renameLayout by remember { mutableStateOf<SavedLayout?>(null) }
     var deleteLayout by remember { mutableStateOf<SavedLayout?>(null) }
     var editPlaceholderPost by remember { mutableStateOf<GridPost?>(null) }
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 80),
-        onResult = { uris ->
-            when (uris.size) {
-                0 -> Unit
-                1 -> viewModel.addImages(uris)
-                else -> pendingImportUris = uris
-            }
-        },
-    )
-    val launchPicker = {
-        picker.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-        )
-    }
+    var showPhotoLibrary by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -180,9 +166,24 @@ fun GridScreen(
             onReset = { confirmReset = true },
             onSave = viewModel::saveCurrentLayout,
             onPlaceholder = { viewModel.addPlaceholder() },
-            onImport = launchPicker,
+            onImport = { showPhotoLibrary = true },
         )
     }
+
+    PhotoLibraryPicker(
+        visible = showPhotoLibrary,
+        mode = PhotoSelectionMode.Multiple,
+        maxSelection = 80,
+        title = "Importa nella griglia",
+        onDismiss = { showPhotoLibrary = false },
+        onPhotosSelected = { uris ->
+            when (uris.size) {
+                0 -> Unit
+                1 -> viewModel.addImages(uris)
+                else -> pendingImportUris = uris
+            }
+        },
+    )
 
     val previewPost = previewPostId?.let { id ->
         state.posts.firstOrNull { it.id == id }
@@ -966,12 +967,14 @@ private fun PlaceholderEditorDialog(
 ) {
     var label by remember(post.id) { mutableStateOf(post.placeholderLabel) }
     var color by remember(post.id) { mutableStateOf(post.placeholderColor) }
-    var type by remember(post.id) { mutableStateOf(post.placeholderType) }
+    var selectedType by remember(post.id) {
+        mutableStateOf(if (post.placeholderLabel.isBlank()) post.placeholderType else null)
+    }
 
     LaunchedEffect(post.placeholderLabel, post.placeholderColor, post.placeholderType) {
         label = post.placeholderLabel
         color = post.placeholderColor
-        type = post.placeholderType
+        selectedType = if (post.placeholderLabel.isBlank()) post.placeholderType else null
     }
 
     AlertDialog(
@@ -981,13 +984,18 @@ private fun PlaceholderEditorDialog(
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 OutlinedTextField(
                     value = label,
-                    onValueChange = { label = it.take(28) },
+                    onValueChange = { value ->
+                        label = value.take(28)
+                        if (label.isNotBlank()) {
+                            selectedType = null
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Nome personalizzato") },
                     singleLine = true,
                 )
                 Text(
-                    text = "Se vuoto, nella griglia viene mostrato il tipo selezionato.",
+                    text = "Se inserisci un nome, il tipo viene deselezionato. Se scegli un tipo, il nome viene cancellato.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -996,8 +1004,11 @@ private fun PlaceholderEditorDialog(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PlaceholderType.entries.forEach { option ->
                             FilterChip(
-                                selected = type == option,
-                                onClick = { type = option },
+                                selected = selectedType == option,
+                                onClick = {
+                                    selectedType = option
+                                    label = ""
+                                },
                                 label = { Text(option.label) },
                             )
                         }
@@ -1006,7 +1017,7 @@ private fun PlaceholderEditorDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Preset neutri", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NeutralPlaceholderColors.forEach { preset ->
+                        PlaceholderPresetColors.forEach { preset ->
                             Surface(
                                 modifier = Modifier
                                     .size(32.dp)
@@ -1029,7 +1040,7 @@ private fun PlaceholderEditorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(color, label, type) }) {
+            TextButton(onClick = { onSave(color, label, selectedType ?: post.placeholderType) }) {
                 Text("Salva")
             }
         },
@@ -1342,15 +1353,6 @@ private fun List<GridPost>.moveItem(fromIndex: Int, toIndex: Int): List<GridPost
         add(toIndex, item)
     }
 }
-
-private val NeutralPlaceholderColors = listOf(
-    0xFF34363D.toInt(),
-    0xFF4D525C.toInt(),
-    0xFF686B70.toInt(),
-    0xFF7B7468.toInt(),
-    0xFF556258.toInt(),
-    0xFF4B6178.toInt(),
-)
 
 private fun formatLayoutDate(timestamp: Long): String {
     return SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(timestamp))

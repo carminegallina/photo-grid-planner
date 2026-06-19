@@ -307,8 +307,14 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(showHiddenPosts = show) }
     }
 
+    suspend fun setShowTutorialOnLaunch(show: Boolean) {
+        updateData { current -> current.copy(showTutorialOnLaunch = show) }
+    }
+
     suspend fun reset() {
-        updateData { PlannerData() }
+        updateData { current ->
+            PlannerData(showTutorialOnLaunch = current.showTutorialOnLaunch)
+        }
     }
 
     private suspend fun updateData(transform: (PlannerData) -> PlannerData) {
@@ -317,6 +323,7 @@ class PlannerRepository(context: Context) {
             preferences[Keys.PostsJson] = encodePosts(next.posts)
             preferences[Keys.PreviewMode] = next.previewMode.name
             preferences[Keys.ShowHiddenPosts] = next.showHiddenPosts
+            preferences[Keys.ShowTutorialOnLaunch] = next.showTutorialOnLaunch
             preferences[Keys.SavedLayoutsJson] = encodeSavedLayouts(next.savedLayouts)
             preferences[Keys.CalendarPlansJson] = encodeCalendarPlans(next.calendarPlans)
         }
@@ -331,6 +338,7 @@ class PlannerRepository(context: Context) {
             posts = posts,
             previewMode = mode,
             showHiddenPosts = this[Keys.ShowHiddenPosts] ?: true,
+            showTutorialOnLaunch = this[Keys.ShowTutorialOnLaunch] ?: true,
             savedLayouts = decodeSavedLayouts(
                 this[Keys.SavedLayoutsJson].orEmpty()
                     .ifBlank { this[Keys.LegacySavedProfileLayoutsJson].orEmpty() },
@@ -474,6 +482,7 @@ class PlannerRepository(context: Context) {
         val PostsJson = stringPreferencesKey("posts_json")
         val PreviewMode = stringPreferencesKey("preview_mode")
         val ShowHiddenPosts = booleanPreferencesKey("show_hidden_posts")
+        val ShowTutorialOnLaunch = booleanPreferencesKey("show_tutorial_on_launch")
         val SavedLayoutsJson = stringPreferencesKey("saved_layouts_json")
         val LegacySavedProfileLayoutsJson = stringPreferencesKey("saved_profile_layouts_json")
         val CalendarPlansJson = stringPreferencesKey("calendar_plans_json")

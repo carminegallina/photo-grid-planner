@@ -24,7 +24,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     val state: StateFlow<PlannerData> = repository.data.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-        initialValue = PlannerData(),
+        initialValue = PlannerData(showTutorialOnLaunch = false),
     )
 
     fun addImages(uris: List<Uri>) {
@@ -92,6 +92,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun setShowHiddenPosts(show: Boolean) {
         viewModelScope.launch { repository.setShowHiddenPosts(show) }
+    }
+
+    fun setShowTutorialOnLaunch(show: Boolean) {
+        viewModelScope.launch { repository.setShowTutorialOnLaunch(show) }
     }
 
     fun resetProject() {

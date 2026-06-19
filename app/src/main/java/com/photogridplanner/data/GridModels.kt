@@ -25,6 +25,15 @@ enum class PlaceholderType(val label: String, val shortLabel: String) {
 
 val DefaultPlaceholderColor: Int = 0xFF34363D.toInt()
 
+val PlaceholderPresetColors: List<Int> = listOf(
+    DefaultPlaceholderColor,
+    0xFF4D525C.toInt(),
+    0xFF686B70.toInt(),
+    0xFF7B7468.toInt(),
+    0xFF556258.toInt(),
+    0xFF4B6178.toInt(),
+)
+
 data class GridPost(
     val id: String,
     val kind: PostKind,
@@ -75,6 +84,7 @@ data class PlannerData(
     val posts: List<GridPost> = emptyList(),
     val previewMode: PreviewMode = PreviewMode.Vertical,
     val showHiddenPosts: Boolean = true,
+    val showTutorialOnLaunch: Boolean = true,
     val savedLayouts: List<SavedLayout> = emptyList(),
     val calendarPlans: List<CalendarDayPlan> = emptyList(),
 ) {

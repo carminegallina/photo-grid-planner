@@ -2,12 +2,8 @@ package com.photogridplanner.ui.cutter
 
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -95,6 +91,8 @@ import com.photogridplanner.cutter.TemplateSlot
 import com.photogridplanner.cutter.TemplateSlotInput
 import com.photogridplanner.cutter.TileFormat
 import com.photogridplanner.image.ImageLoader
+import com.photogridplanner.ui.media.PhotoLibraryPicker
+import com.photogridplanner.ui.media.PhotoSelectionMode
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -242,6 +240,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
     var importTarget by remember { mutableStateOf(CutterMode.Mosaic) }
     var pendingTemplateMode by remember { mutableStateOf<CutterMode?>(null) }
     var pendingTemplateSlotId by remember { mutableStateOf<String?>(null) }
+    var showPhotoLibrary by remember { mutableStateOf(false) }
 
     var columns by rememberSaveable { mutableStateOf(3) }
     var rows by rememberSaveable { mutableStateOf(3) }
@@ -346,56 +345,49 @@ fun CutterScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            if (uri == null) {
-                pendingTemplateMode = null
-                pendingTemplateSlotId = null
-            } else {
-                persistReadAccess(context, uri)
-                val slotId = pendingTemplateSlotId
-                val templateMode = pendingTemplateMode
-                if (slotId != null && templateMode != null) {
-                    when (templateMode) {
-                        CutterMode.SinglePost -> {
-                            singleTemplateUris = singleTemplateUris + (slotId to uri.toString())
-                            singleTemplateTransforms = singleTemplateTransforms + (slotId to MosaicTransform())
-                            selectedSingleTemplateSlot = slotId
-                        }
-
-                        CutterMode.Carousel -> {
-                            carouselTemplateUris = carouselTemplateUris + (slotId to uri.toString())
-                            carouselTemplateTransforms = carouselTemplateTransforms + (slotId to MosaicTransform())
-                            selectedCarouselTemplateSlot = slotId
-                        }
-
-                        CutterMode.Mosaic -> Unit
-                    }
-                    pendingTemplateMode = null
-                    pendingTemplateSlotId = null
-                } else {
-                    when (importTarget) {
-                        CutterMode.Mosaic -> mosaicUri = uri.toString()
-                        CutterMode.SinglePost -> postUri = uri.toString()
-                        CutterMode.Carousel -> carouselUri = uri.toString()
-                    }
-                    resetTransform(importTarget)
+    fun handleImportedPhoto(uri: Uri) {
+        val slotId = pendingTemplateSlotId
+        val templateMode = pendingTemplateMode
+        if (slotId != null && templateMode != null) {
+            when (templateMode) {
+                CutterMode.SinglePost -> {
+                    singleTemplateUris = singleTemplateUris + (slotId to uri.toString())
+                    singleTemplateTransforms = singleTemplateTransforms + (slotId to MosaicTransform())
+                    selectedSingleTemplateSlot = slotId
                 }
-                clearOutput()
+
+                CutterMode.Carousel -> {
+                    carouselTemplateUris = carouselTemplateUris + (slotId to uri.toString())
+                    carouselTemplateTransforms = carouselTemplateTransforms + (slotId to MosaicTransform())
+                    selectedCarouselTemplateSlot = slotId
+                }
+
+                CutterMode.Mosaic -> Unit
             }
-        },
-    )
+            pendingTemplateMode = null
+            pendingTemplateSlotId = null
+        } else {
+            when (importTarget) {
+                CutterMode.Mosaic -> mosaicUri = uri.toString()
+                CutterMode.SinglePost -> postUri = uri.toString()
+                CutterMode.Carousel -> carouselUri = uri.toString()
+            }
+            resetTransform(importTarget)
+        }
+        clearOutput()
+    }
 
     fun launchPicker(target: CutterMode) {
         importTarget = target
-        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        pendingTemplateMode = null
+        pendingTemplateSlotId = null
+        showPhotoLibrary = true
     }
 
     fun launchTemplatePicker(target: CutterMode, slotId: String) {
         pendingTemplateMode = target
         pendingTemplateSlotId = slotId
-        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        showPhotoLibrary = true
     }
 
     fun startCut(
@@ -804,6 +796,20 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             ResultList(results = results)
         }
     }
+
+    PhotoLibraryPicker(
+        visible = showPhotoLibrary,
+        mode = PhotoSelectionMode.Single,
+        title = "Seleziona foto",
+        onDismiss = {
+            showPhotoLibrary = false
+            pendingTemplateMode = null
+            pendingTemplateSlotId = null
+        },
+        onPhotosSelected = { uris ->
+            uris.firstOrNull()?.let(::handleImportedPhoto)
+        },
+    )
 }
 
 @Composable
@@ -2070,14 +2076,5 @@ private fun ResultList(results: List<CutTileResult>) {
                 }
             }
         }
-    }
-}
-
-private fun persistReadAccess(context: android.content.Context, uri: Uri) {
-    runCatching {
-        context.contentResolver.takePersistableUriPermission(
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
     }
 }

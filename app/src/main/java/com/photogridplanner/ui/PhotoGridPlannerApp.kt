@@ -47,6 +47,7 @@ import com.photogridplanner.ui.calendar.CalendarScreen
 import com.photogridplanner.ui.cutter.CutterScreen
 import com.photogridplanner.ui.grid.GridScreen
 import com.photogridplanner.ui.settings.SettingsScreen
+import com.photogridplanner.ui.tutorial.AppTutorialDialog
 import com.photogridplanner.viewmodel.PlannerViewModel
 
 private enum class Destination(val label: String) {
@@ -70,6 +71,8 @@ private val Destination.index: Int
 fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
     val state by viewModel.state.collectAsState()
     var currentDestination by rememberSaveable { mutableStateOf(Destination.Grid) }
+    var tutorialDismissedThisLaunch by rememberSaveable { mutableStateOf(false) }
+    var forceTutorial by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -172,9 +175,22 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
                     state = state,
                     viewModel = viewModel,
                     modifier = Modifier.padding(padding),
+                    onShowTutorial = { forceTutorial = true },
                 )
             }
         }
+    }
+
+    if ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial) {
+        AppTutorialDialog(
+            onClose = { dontShowAgain ->
+                tutorialDismissedThisLaunch = true
+                forceTutorial = false
+                if (dontShowAgain) {
+                    viewModel.setShowTutorialOnLaunch(false)
+                }
+            },
+        )
     }
 }
 
