@@ -192,6 +192,11 @@ fun PhotoLibraryPicker(
                                 }
                             }
                         },
+                        onAddToSelection = { uris ->
+                            if (mode == PhotoSelectionMode.Multiple) {
+                                selected = (selected + uris.filterNot { it in selected }).take(maxSelection)
+                            }
+                        },
                     )
                 } else {
                     PhotoPermissionDeniedContent(
@@ -240,14 +245,28 @@ private fun PhotoLibraryContent(
     maxSelection: Int,
     onManageAccess: () -> Unit,
     onTogglePhoto: (Uri) -> Unit,
+    onAddToSelection: (List<Uri>) -> Unit,
 ) {
     val density = LocalDensity.current
     var cellSizePx by remember { mutableIntStateOf(0) }
     val cellStridePx = cellSizePx + with(density) { 6.dp.toPx() }
 
-    fun addToSelection(uri: Uri) {
-        if (mode == PhotoSelectionMode.Multiple && uri !in selected && selected.size < maxSelection) {
-            onTogglePhoto(uri)
+    fun photosInSelectionRectangle(startIndex: Int, endIndex: Int): List<Uri> {
+        val startRow = startIndex / PhotoGridColumns
+        val startColumn = startIndex % PhotoGridColumns
+        val endRow = endIndex / PhotoGridColumns
+        val endColumn = endIndex % PhotoGridColumns
+        val firstRow = minOf(startRow, endRow)
+        val lastRow = maxOf(startRow, endRow)
+        val firstColumn = minOf(startColumn, endColumn)
+        val lastColumn = maxOf(startColumn, endColumn)
+
+        return buildList {
+            for (row in firstRow..lastRow) {
+                for (column in firstColumn..lastColumn) {
+                    photos.getOrNull(row * PhotoGridColumns + column)?.let { add(it.uri) }
+                }
+            }
         }
     }
 
@@ -294,7 +313,7 @@ private fun PhotoLibraryContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             LocalizedText(
-                text = "Tieni premuto e trascina per selezionare più foto",
+                text = "Tieni premuto e trascina per selezionare piu foto",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -335,11 +354,9 @@ private fun PhotoLibraryContent(
                         cellStridePx = cellStridePx,
                         onCellSizeChanged = { size -> cellSizePx = size },
                         onClick = { onTogglePhoto(photo.uri) },
-                        onAddToSelection = { addToSelection(photo.uri) },
+                        onAddToSelection = { onAddToSelection(listOf(photo.uri)) },
                         onDragSelect = { targetIndex ->
-                            photos.getOrNull(targetIndex)?.let { target ->
-                                addToSelection(target.uri)
-                            }
+                            onAddToSelection(photosInSelectionRectangle(index, targetIndex))
                         },
                     )
                 }
@@ -544,7 +561,11 @@ private fun queryDeviceImages(context: Context): List<PhotoAsset> {
     val projection = arrayOf(
         MediaStore.Images.Media._ID,
     )
-    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+    // Generated cuts receive a deterministic DATE_TAKEN value, so this keeps their
+    // intended publishing/slide sequence stable even when they are created together.
+    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC, " +
+        "${MediaStore.Images.Media.DATE_ADDED} DESC, " +
+        "${MediaStore.Images.Media._ID} DESC"
 
     // Con accesso parziale su Android 14, MediaStore restituisce solo gli elementi autorizzati.
     return context.contentResolver.query(
