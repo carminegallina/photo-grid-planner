@@ -3,6 +3,7 @@ package com.photogridplanner.ui.grid
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.ViewModule
@@ -118,7 +120,7 @@ fun GridScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            ProfilePreviewHeader(
+            ProfilePreviewHeaderModern(
                 postCount = state.visiblePosts.size,
                 savedLayoutCount = state.savedLayouts.size,
                 onOpenLayouts = { showLayoutsDialog = true },
@@ -155,7 +157,7 @@ fun GridScreen(
         ) {
             FloatingActionButton(
                 onClick = { confirmReset = true },
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.tertiary,
             ) {
                 Icon(
@@ -166,7 +168,7 @@ fun GridScreen(
             }
             FloatingActionButton(
                 onClick = viewModel::saveCurrentLayout,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
             ) {
                 Icon(
@@ -177,7 +179,7 @@ fun GridScreen(
             }
             FloatingActionButton(
                 onClick = { viewModel.addPlaceholder() },
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
                 Icon(
@@ -312,6 +314,145 @@ fun GridScreen(
                     Text("Annulla")
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun ProfilePreviewHeaderModern(
+    postCount: Int,
+    savedLayoutCount: Int,
+    onOpenLayouts: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "photo.grid",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
+                ) {
+                    Text(
+                        text = "+",
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+                OutlinedButton(onClick = onOpenLayouts) {
+                    Text("Layout $savedLayoutCount", maxLines = 1)
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(82.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.86f),
+                border = BorderStroke(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.44f),
+                ),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "PG",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceAround,
+            ) {
+                ProfileStat(value = postCount.toString(), label = "post")
+                ProfileStat(value = "1.248", label = "follower")
+                ProfileStat(value = "312", label = "seguiti")
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Photo Grid Planner",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "Fotografia, palette e composizioni in anteprima.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ProfileButton(text = "Modifica profilo", modifier = Modifier.weight(1f))
+            ProfileButton(text = "Condividi profilo", modifier = Modifier.weight(1f))
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            ProfileHighlight(label = "Portfolio")
+            ProfileHighlight(label = "Mosaici")
+            ProfileHighlight(label = "Palette")
+            ProfileHighlight(label = "Bozze")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProfileTab(
+                selected = true,
+                label = "POST",
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.ViewModule,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(22.dp),
+                    )
+                },
+            )
+            ProfileTab(selected = false, label = "REELS")
+            ProfileTab(selected = false, label = "TAG")
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)),
         )
     }
 }
@@ -457,10 +598,10 @@ private fun ProfileHighlight(label: String) {
         Surface(
             modifier = Modifier.size(58.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            border = androidx.compose.foundation.BorderStroke(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f),
+            border = BorderStroke(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f),
             ),
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -527,8 +668,9 @@ private fun ProfileButton(
 ) {
     Surface(
         modifier = modifier.height(34.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
         shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
@@ -544,7 +686,7 @@ private fun ProfileButton(
 private fun EmptyGrid(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.84f), RoundedCornerShape(8.dp))
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -619,8 +761,9 @@ private fun LayoutsDialog(
                 ) {
                     layouts.forEach { layout ->
                         Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.74f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
                         ) {
                             Column(
                                 modifier = Modifier

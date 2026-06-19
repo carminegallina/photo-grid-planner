@@ -1,6 +1,12 @@
 package com.photogridplanner.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material.icons.rounded.ContentCut
@@ -11,7 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,7 +28,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.photogridplanner.ui.analysis.FeedAnalysisScreen
 import com.photogridplanner.ui.calendar.CalendarScreen
@@ -46,40 +57,54 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                 contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
+                tonalElevation = 0.dp,
             ) {
-                NavigationBarItem(
-                    selected = currentDestination == Destination.Grid,
-                    onClick = { currentDestination = Destination.Grid },
-                    icon = { Icon(Icons.Rounded.ViewModule, contentDescription = null) },
-                    label = { NavLabel(Destination.Grid.label) },
-                )
-                NavigationBarItem(
-                    selected = currentDestination == Destination.Analysis,
-                    onClick = { currentDestination = Destination.Analysis },
-                    icon = { Icon(Icons.Rounded.Analytics, contentDescription = null) },
-                    label = { NavLabel(Destination.Analysis.label) },
-                )
-                NavigationBarItem(
-                    selected = currentDestination == Destination.Calendar,
-                    onClick = { currentDestination = Destination.Calendar },
-                    icon = { Icon(Icons.Rounded.DateRange, contentDescription = null) },
-                    label = { NavLabel(Destination.Calendar.label) },
-                )
-                NavigationBarItem(
-                    selected = currentDestination == Destination.Cutter,
-                    onClick = { currentDestination = Destination.Cutter },
-                    icon = { Icon(Icons.Rounded.ContentCut, contentDescription = null) },
-                    label = { NavLabel(Destination.Cutter.label) },
-                )
-                NavigationBarItem(
-                    selected = currentDestination == Destination.Settings,
-                    onClick = { currentDestination = Destination.Settings },
-                    icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    label = { NavLabel(Destination.Settings.label) },
-                )
+                NavigationBar(
+                    modifier = Modifier.height(66.dp),
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 0.dp,
+                ) {
+                    AppNavItem(
+                        selected = currentDestination == Destination.Grid,
+                        onClick = { currentDestination = Destination.Grid },
+                        icon = Icons.Rounded.ViewModule,
+                        label = Destination.Grid.label,
+                    )
+                    AppNavItem(
+                        selected = currentDestination == Destination.Analysis,
+                        onClick = { currentDestination = Destination.Analysis },
+                        icon = Icons.Rounded.Analytics,
+                        label = Destination.Analysis.label,
+                    )
+                    AppNavItem(
+                        selected = currentDestination == Destination.Calendar,
+                        onClick = { currentDestination = Destination.Calendar },
+                        icon = Icons.Rounded.DateRange,
+                        label = Destination.Calendar.label,
+                    )
+                    AppNavItem(
+                        selected = currentDestination == Destination.Cutter,
+                        onClick = { currentDestination = Destination.Cutter },
+                        icon = Icons.Rounded.ContentCut,
+                        label = Destination.Cutter.label,
+                    )
+                    AppNavItem(
+                        selected = currentDestination == Destination.Settings,
+                        onClick = { currentDestination = Destination.Settings },
+                        icon = Icons.Rounded.Settings,
+                        label = Destination.Settings.label,
+                    )
+                }
             }
         },
     ) { padding ->
@@ -115,11 +140,33 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
 }
 
 @Composable
+private fun RowScope.AppNavItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String,
+) {
+    NavigationBarItem(
+        selected = selected,
+        onClick = onClick,
+        icon = { Icon(icon, contentDescription = null) },
+        label = { NavLabel(label) },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primary,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    )
+}
+
+@Composable
 private fun NavLabel(text: String) {
     Text(
         text = text,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
     )
 }

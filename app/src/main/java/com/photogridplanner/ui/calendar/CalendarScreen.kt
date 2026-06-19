@@ -304,14 +304,14 @@ private fun CalendarOverviewCard(
     onClearSchedule: () -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             FlowRow(
@@ -398,14 +398,14 @@ private fun PostSelectionStrip(
     onClearPostDate: (GridPost) -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
@@ -477,14 +477,14 @@ private fun MonthCalendar(
     val weekLabels = listOf("Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom")
 
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
