@@ -1,5 +1,13 @@
 package com.photogridplanner.ui.analysis
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -119,11 +127,28 @@ fun FeedAnalysisScreen(
             }
         }
 
-        when {
-            state.posts.isEmpty() -> EmptyAnalysisCard()
-            isLoading -> LoadingCard()
-            errorMessage != null -> MessageCard(title = "Analisi non disponibile", message = errorMessage.orEmpty())
-            result != null -> AnalysisContent(result = result!!)
+        val viewState = when {
+            state.posts.isEmpty() -> "empty"
+            isLoading -> "loading"
+            errorMessage != null -> "error"
+            result != null -> "result"
+            else -> "idle"
+        }
+        AnimatedContent(
+            targetState = viewState,
+            label = "analysis_state",
+            transitionSpec = {
+                (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.98f))
+                    .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.98f))
+            },
+        ) { stateKey ->
+            when (stateKey) {
+                "empty" -> EmptyAnalysisCard()
+                "loading" -> LoadingCard()
+                "error" -> MessageCard(title = "Analisi non disponibile", message = errorMessage.orEmpty())
+                "result" -> result?.let { AnalysisContent(result = it) }
+                else -> Unit
+            }
         }
     }
 }
@@ -553,6 +578,7 @@ private fun MessageCard(title: String, message: String) {
 @Composable
 private fun AnalysisPanel(content: @Composable ColumnScope.() -> Unit) {
     Surface(
+        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),

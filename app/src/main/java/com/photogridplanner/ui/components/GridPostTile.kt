@@ -1,5 +1,11 @@
 package com.photogridplanner.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -73,10 +79,14 @@ fun GridPostTile(
             )
         }
 
-        if (post.isCarousel) {
+        AnimatedVisibility(
+            visible = post.isCarousel,
+            enter = fadeIn(tween(140)) + scaleIn(tween(140), initialScale = 0.86f),
+            exit = fadeOut(tween(100)) + scaleOut(tween(100), targetScale = 0.86f),
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
             Surface(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
                     .padding(7.dp),
                 color = Color.Black.copy(alpha = 0.54f),
                 shape = RoundedCornerShape(999.dp),
@@ -101,16 +111,25 @@ fun GridPostTile(
             }
         }
 
-        if (post.hidden) {
+        AnimatedVisibility(
+            visible = post.hidden,
+            enter = fadeIn(tween(160)),
+            exit = fadeOut(tween(120)),
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.64f)),
             )
+        }
+        AnimatedVisibility(
+            visible = post.hidden,
+            enter = fadeIn(tween(160)) + scaleIn(tween(160), initialScale = 0.92f),
+            exit = fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.92f),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
             Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(8.dp),
+                modifier = Modifier.padding(8.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
                 shape = RoundedCornerShape(999.dp),
             ) {

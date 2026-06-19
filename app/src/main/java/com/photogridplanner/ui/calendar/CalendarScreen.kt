@@ -3,6 +3,7 @@ package com.photogridplanner.ui.calendar
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -304,6 +305,7 @@ private fun CalendarOverviewCard(
     onClearSchedule: () -> Unit,
 ) {
     Surface(
+        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
@@ -398,6 +400,7 @@ private fun PostSelectionStrip(
     onClearPostDate: (GridPost) -> Unit,
 ) {
     Surface(
+        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
@@ -477,6 +480,7 @@ private fun MonthCalendar(
     val weekLabels = listOf("Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom")
 
     Surface(
+        modifier = Modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shape = RoundedCornerShape(8.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),

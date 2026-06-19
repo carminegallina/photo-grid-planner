@@ -1,5 +1,13 @@
 package com.photogridplanner.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +55,15 @@ private enum class Destination(val label: String) {
     Cutter("Cutter"),
     Settings("Impost."),
 }
+
+private val Destination.index: Int
+    get() = when (this) {
+        Destination.Grid -> 0
+        Destination.Analysis -> 1
+        Destination.Calendar -> 2
+        Destination.Cutter -> 3
+        Destination.Settings -> 4
+    }
 
 @Composable
 fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
@@ -108,33 +125,54 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
             }
         },
     ) { padding ->
-        when (currentDestination) {
-            Destination.Grid -> GridScreen(
-                state = state,
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding),
-            )
+        AnimatedContent(
+            targetState = currentDestination,
+            label = "screen_transition",
+            transitionSpec = {
+                val direction = if (targetState.index > initialState.index) 1 else -1
+                (
+                    fadeIn(animationSpec = tween(160)) +
+                        slideInHorizontally(
+                            animationSpec = tween(220),
+                            initialOffsetX = { fullWidth -> fullWidth / 7 * direction },
+                        )
+                    ).togetherWith(
+                        fadeOut(animationSpec = tween(120)) +
+                            slideOutHorizontally(
+                                animationSpec = tween(180),
+                                targetOffsetX = { fullWidth -> -fullWidth / 10 * direction },
+                            ),
+                    ).using(SizeTransform(clip = false))
+            },
+        ) { destination ->
+            when (destination) {
+                Destination.Grid -> GridScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding),
+                )
 
-            Destination.Calendar -> CalendarScreen(
-                state = state,
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding),
-            )
+                Destination.Calendar -> CalendarScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding),
+                )
 
-            Destination.Analysis -> FeedAnalysisScreen(
-                state = state,
-                modifier = Modifier.padding(padding),
-            )
+                Destination.Analysis -> FeedAnalysisScreen(
+                    state = state,
+                    modifier = Modifier.padding(padding),
+                )
 
-            Destination.Cutter -> CutterScreen(
-                modifier = Modifier.padding(padding),
-            )
+                Destination.Cutter -> CutterScreen(
+                    modifier = Modifier.padding(padding),
+                )
 
-            Destination.Settings -> SettingsScreen(
-                state = state,
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding),
-            )
+                Destination.Settings -> SettingsScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding),
+                )
+            }
         }
     }
 }
@@ -151,6 +189,7 @@ private fun RowScope.AppNavItem(
         onClick = onClick,
         icon = { Icon(icon, contentDescription = null) },
         label = { NavLabel(label) },
+        alwaysShowLabel = selected,
         colors = NavigationBarItemDefaults.colors(
             selectedIconColor = MaterialTheme.colorScheme.onPrimary,
             selectedTextColor = MaterialTheme.colorScheme.primary,

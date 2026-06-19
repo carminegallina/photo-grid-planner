@@ -3,6 +3,14 @@ package com.photogridplanner.ui.grid
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -41,8 +49,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,6 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -126,80 +135,47 @@ fun GridScreen(
                 onOpenLayouts = { showLayoutsDialog = true },
             )
 
-            if (state.visiblePosts.isEmpty()) {
-                EmptyGrid(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(360.dp),
-                )
-            } else {
-                ReorderableGrid(
-                    posts = state.visiblePosts,
-                    aspectRatio = PreviewMode.Vertical.aspectRatio,
-                    onReorderFinished = viewModel::setPostOrder,
-                    onOpen = { post -> previewPostId = post.id },
-                    onToggleVisibility = { post -> viewModel.togglePostVisibility(post.id) },
-                    onDelete = { post -> viewModel.deletePost(post.id) },
-                    onPlaceholderColorChange = { post, color ->
-                        viewModel.setPlaceholderColor(post.id, color)
-                    },
-                    onEditPlaceholder = { post -> editPlaceholderPost = post },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            AnimatedContent(
+                targetState = state.visiblePosts.isEmpty(),
+                label = "grid_empty_state",
+                transitionSpec = {
+                    (fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.98f))
+                        .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.98f))
+                },
+            ) { isEmpty ->
+                if (isEmpty) {
+                    EmptyGrid(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(360.dp),
+                    )
+                } else {
+                    ReorderableGrid(
+                        posts = state.visiblePosts,
+                        aspectRatio = PreviewMode.Vertical.aspectRatio,
+                        onReorderFinished = viewModel::setPostOrder,
+                        onOpen = { post -> previewPostId = post.id },
+                        onToggleVisibility = { post -> viewModel.togglePostVisibility(post.id) },
+                        onDelete = { post -> viewModel.deletePost(post.id) },
+                        onPlaceholderColorChange = { post, color ->
+                            viewModel.setPlaceholderColor(post.id, color)
+                        },
+                        onEditPlaceholder = { post -> editPlaceholderPost = post },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
-        Row(
+        GridActionDock(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(22.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            FloatingActionButton(
-                onClick = { confirmReset = true },
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.tertiary,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.RestartAlt,
-                    contentDescription = "Svuota griglia",
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            FloatingActionButton(
-                onClick = viewModel::saveCurrentLayout,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Save,
-                    contentDescription = "Salva layout",
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            FloatingActionButton(
-                onClick = { viewModel.addPlaceholder() },
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Image,
-                    contentDescription = "Aggiungi placeholder",
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            FloatingActionButton(
-                onClick = launchPicker,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = "Importa immagini",
-                    modifier = Modifier.size(30.dp),
-                )
-            }
-        }
+            onReset = { confirmReset = true },
+            onSave = viewModel::saveCurrentLayout,
+            onPlaceholder = { viewModel.addPlaceholder() },
+            onImport = launchPicker,
+        )
     }
 
     val previewPost = previewPostId?.let { id ->
@@ -314,6 +290,82 @@ fun GridScreen(
                     Text("Annulla")
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun GridActionDock(
+    onReset: () -> Unit,
+    onSave: () -> Unit,
+    onPlaceholder: () -> Unit,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.animateContentSize(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.20f)),
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DockIconButton(
+                icon = Icons.Rounded.RestartAlt,
+                contentDescription = "Svuota griglia",
+                tint = MaterialTheme.colorScheme.tertiary,
+                onClick = onReset,
+            )
+            DockIconButton(
+                icon = Icons.Rounded.Save,
+                contentDescription = "Salva layout",
+                tint = MaterialTheme.colorScheme.primary,
+                onClick = onSave,
+            )
+            DockIconButton(
+                icon = Icons.Rounded.Image,
+                contentDescription = "Aggiungi placeholder",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = onPlaceholder,
+            )
+            DockIconButton(
+                icon = Icons.Rounded.Add,
+                contentDescription = "Importa immagini",
+                tint = MaterialTheme.colorScheme.onPrimary,
+                selected = true,
+                onClick = onImport,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DockIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(44.dp)
+            .background(
+                color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                shape = CircleShape,
+            ),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(if (selected) 26.dp else 23.dp),
         )
     }
 }
