@@ -3,13 +3,18 @@ package com.photogridplanner.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.DropdownMenu
@@ -24,8 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.photogridplanner.data.DefaultPlaceholderColor
 import com.photogridplanner.data.GridPost
 import com.photogridplanner.data.PostKind
+
+private val PlaceholderPalette = listOf(
+    DefaultPlaceholderColor,
+    0xFF5E6472.toInt(),
+    0xFF7D7461.toInt(),
+    0xFF6F7F72.toInt(),
+    0xFF4B6178.toInt(),
+    0xFF8A6F76.toInt(),
+)
 
 @Composable
 fun GridPostTile(
@@ -36,20 +51,54 @@ fun GridPostTile(
     onDismissMenu: () -> Unit,
     onToggleVisibility: () -> Unit,
     onDelete: () -> Unit,
+    onPlaceholderColorChange: (Int) -> Unit = {},
+    onEditPlaceholder: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
             .background(Color.Black)
-            .clickable(enabled = post.kind == PostKind.Image && post.uri != null, onClick = onOpen),
+            .clickable(enabled = post.kind == PostKind.Image && post.coverUri != null, onClick = onOpen),
     ) {
         when (post.kind) {
             PostKind.Image -> AsyncUriImage(
-                uri = post.uri.orEmpty(),
+                uri = post.coverUri.orEmpty(),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
 
-            PostKind.Placeholder -> PlaceholderTile(modifier = Modifier.fillMaxSize())
+            PostKind.Placeholder -> PlaceholderTile(
+                color = post.placeholderColor,
+                label = post.placeholderDisplayLabel,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        if (post.isCarousel) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(7.dp),
+                color = Color.Black.copy(alpha = 0.54f),
+                shape = RoundedCornerShape(999.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ViewCarousel,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        text = post.allMediaUris.size.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                    )
+                }
+            }
         }
 
         if (post.hidden) {
@@ -88,6 +137,52 @@ fun GridPostTile(
             onDismissRequest = onDismissMenu,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
+            if (post.kind == PostKind.Placeholder) {
+                DropdownMenuItem(
+                    text = { Text("Modifica placeholder") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = {
+                        onDismissMenu()
+                        onEditPlaceholder()
+                    },
+                )
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text("Colore placeholder")
+                            Row(
+                                modifier = Modifier.padding(top = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PlaceholderPalette.forEach { color ->
+                                    Surface(
+                                        modifier = Modifier
+                                            .padding(end = 8.dp)
+                                            .size(28.dp)
+                                            .clickable {
+                                                onDismissMenu()
+                                                onPlaceholderColorChange(color)
+                                            },
+                                        shape = CircleShape,
+                                        color = Color(color),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                                        ),
+                                        content = {},
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    onClick = {},
+                )
+            }
             DropdownMenuItem(
                 text = { Text(if (post.hidden) "Mostra nella preview" else "Oscura dalla preview") },
                 leadingIcon = {
@@ -120,8 +215,26 @@ fun GridPostTile(
 }
 
 @Composable
-private fun PlaceholderTile(modifier: Modifier = Modifier) {
-    EmptyImageSlot(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
-    )
+private fun PlaceholderTile(
+    color: Int,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.background(Color(color)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(999.dp),
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.72f),
+                maxLines = 1,
+            )
+        }
+    }
 }

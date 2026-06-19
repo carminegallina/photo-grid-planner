@@ -3,6 +3,9 @@ package com.photogridplanner.cutter
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -12,78 +15,202 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object MosaicCutter {
+    private const val MaxTiles = 20
+    private const val MaxDecodeSize = 10800
+    private const val OutputExtension = "png"
+    private const val OutputMimeType = "image/png"
+
     suspend fun cutAndSave(
         context: Context,
         sourceUri: Uri,
         spec: MosaicSpec,
         format: TileFormat,
         destination: SaveDestination,
+        transform: MosaicTransform = MosaicTransform(),
+        frame: CutterFrame = CutterFrame(),
+        namePrefix: String = "grid",
+        exportOrder: CutExportOrder = CutExportOrder.Visual,
     ): List<CutTileResult> = withContext(Dispatchers.IO) {
-        val source = ImageLoader.loadBitmap(context, sourceUri, maxSize = 7200)
-        val cropped = centerCropForMosaic(source, spec, format)
-        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        require(spec.columns > 0 && spec.rows > 0) { "La griglia deve avere almeno una riga e una colonna." }
+        require(spec.tileCount <= MaxTiles) { "Riduci il mosaico: massimo $MaxTiles tasselli per taglio." }
 
-        val results = buildList {
-            for (row in 0 until spec.rows) {
-                for (column in 0 until spec.columns) {
-                    val tileIndex = row * spec.columns + column + 1
-                    val tile = createTile(cropped, row, column, spec, format)
-                    val displayName = "grid_${timestamp}_${spec.label}_${tileIndex.toString().padStart(2, '0')}"
-                    add(saveTile(context, tile, displayName, row, column, tileIndex, destination))
+        val usesProfileSafeArea = exportOrder == CutExportOrder.ProfilePublish
+        val visibleOutputWidth = spec.outputWidth(format, profileVisible = usesProfileSafeArea)
+        val outputWidth = if (usesProfileSafeArea) {
+            visibleOutputWidth + format.profileSideInset * 2
+        } else {
+            visibleOutputWidth
+        }
+        val outputHeight = spec.outputHeight(format)
+        val decodeSize = max(outputWidth, outputHeight).coerceIn(7200, MaxDecodeSize)
+        val source = ImageLoader.loadBitmap(context, sourceUri, maxSize = decodeSize)
+        val mosaic = renderMosaic(
+            source = source,
+            outputWidth = outputWidth,
+            outputHeight = outputHeight,
+            transform = transform,
+            frame = frame,
+            profileSideInset = if (usesProfileSafeArea) format.profileSideInset else 0,
+        )
+        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+        val cutPlans = cutCoordinates(spec, exportOrder).mapIndexed { index, coordinate ->
+            CutPlan(
+                publishIndex = index + 1,
+                row = coordinate.first,
+                column = coordinate.second,
+            )
+        }
+        val savePlans = if (exportOrder == CutExportOrder.ProfilePublish) {
+            cutPlans.asReversed()
+        } else {
+            cutPlans
+        }
+
+        try {
+            val savedResults = MutableList<CutTileResult?>(cutPlans.size) { null }
+            savePlans.forEach { plan ->
+                val tile = if (usesProfileSafeArea) {
+                    createProfileSafeTile(mosaic, plan.row, plan.column, format)
+                } else {
+                    Bitmap.createBitmap(
+                        mosaic,
+                        plan.column * format.width,
+                        plan.row * format.height,
+                        format.width,
+                        format.height,
+                    )
+                }
+                try {
+                    val displayName = "${namePrefix}_${timestamp}_${spec.label}_${plan.publishIndex.toString().padStart(2, '0')}"
+                    savedResults[plan.publishIndex - 1] = saveTile(
+                        context = context,
+                        bitmap = tile,
+                        displayName = displayName,
+                        row = plan.row,
+                        column = plan.column,
+                        publishIndex = plan.publishIndex,
+                        destination = destination,
+                    )
+                } finally {
                     tile.recycle()
                 }
             }
+            savedResults.filterNotNull()
+        } finally {
+            mosaic.recycle()
+            source.recycle()
         }
-
-        if (cropped !== source) cropped.recycle()
-        source.recycle()
-        results
     }
 
-    private fun centerCropForMosaic(
-        source: Bitmap,
-        spec: MosaicSpec,
-        format: TileFormat,
-    ): Bitmap {
-        val targetAspect = (spec.columns * format.width).toFloat() /
-            (spec.rows * format.height).toFloat()
-        val sourceAspect = source.width.toFloat() / source.height.toFloat()
-
-        val cropWidth: Int
-        val cropHeight: Int
-        if (sourceAspect > targetAspect) {
-            cropHeight = source.height
-            cropWidth = (cropHeight * targetAspect).roundToInt().coerceAtMost(source.width)
-        } else {
-            cropWidth = source.width
-            cropHeight = (cropWidth / targetAspect).roundToInt().coerceAtMost(source.height)
-        }
-
-        val startX = ((source.width - cropWidth) / 2).coerceAtLeast(0)
-        val startY = ((source.height - cropHeight) / 2).coerceAtLeast(0)
-        return Bitmap.createBitmap(source, startX, startY, cropWidth, cropHeight)
-    }
-
-    private fun createTile(
-        cropped: Bitmap,
+    private fun createProfileSafeTile(
+        mosaic: Bitmap,
         row: Int,
         column: Int,
-        spec: MosaicSpec,
         format: TileFormat,
     ): Bitmap {
-        val tileWidth = cropped.width / spec.columns
-        val tileHeight = cropped.height / spec.rows
-        val x = column * tileWidth
-        val y = row * tileHeight
-        val rawTile = Bitmap.createBitmap(cropped, x, y, tileWidth, tileHeight)
-        val scaled = Bitmap.createScaledBitmap(rawTile, format.width, format.height, true)
-        if (scaled !== rawTile) rawTile.recycle()
-        return scaled
+        val sourceLeft = column * format.profileVisibleWidth
+        return Bitmap.createBitmap(
+            mosaic,
+            sourceLeft,
+            row * format.height,
+            format.width,
+            format.height,
+        )
+    }
+
+    private data class CutPlan(
+        val publishIndex: Int,
+        val row: Int,
+        val column: Int,
+    )
+
+    private fun cutCoordinates(
+        spec: MosaicSpec,
+        exportOrder: CutExportOrder,
+    ): List<Pair<Int, Int>> {
+        return when (exportOrder) {
+            CutExportOrder.Visual -> buildList {
+                for (row in 0 until spec.rows) {
+                    for (column in 0 until spec.columns) {
+                        add(row to column)
+                    }
+                }
+            }
+
+            CutExportOrder.ProfilePublish -> buildList {
+                for (row in spec.rows - 1 downTo 0) {
+                    for (column in spec.columns - 1 downTo 0) {
+                        add(row to column)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderMosaic(
+        source: Bitmap,
+        outputWidth: Int,
+        outputHeight: Int,
+        transform: MosaicTransform,
+        frame: CutterFrame,
+        profileSideInset: Int,
+    ): Bitmap {
+        val mosaic = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(mosaic)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
+        val imageRect = if (frame.enabled) {
+            canvas.drawColor(frame.colorArgb)
+            val visibleWidth = (outputWidth - profileSideInset * 2).coerceAtLeast(1)
+            val inset = (minOf(visibleWidth, outputHeight) * frame.safeThicknessPercent)
+                .roundToInt()
+                .coerceAtLeast(0)
+            RectF(
+                profileSideInset + inset.toFloat(),
+                inset.toFloat(),
+                profileSideInset + visibleWidth - inset.toFloat(),
+                outputHeight - inset.toFloat(),
+            )
+        } else {
+            RectF(0f, 0f, outputWidth.toFloat(), outputHeight.toFloat())
+        }
+        val destination = destinationRect(
+            sourceWidth = source.width.toFloat(),
+            sourceHeight = source.height.toFloat(),
+            outputWidth = imageRect.width(),
+            outputHeight = imageRect.height(),
+            transform = transform,
+        ).apply {
+            offset(imageRect.left, imageRect.top)
+        }
+        val checkpoint = canvas.save()
+        canvas.clipRect(imageRect)
+        canvas.drawBitmap(source, null, destination, paint)
+        canvas.restoreToCount(checkpoint)
+        return mosaic
+    }
+
+    private fun destinationRect(
+        sourceWidth: Float,
+        sourceHeight: Float,
+        outputWidth: Float,
+        outputHeight: Float,
+        transform: MosaicTransform,
+    ): RectF {
+        val baseScale = max(outputWidth / sourceWidth, outputHeight / sourceHeight)
+        val drawScale = baseScale * transform.safeScale
+        val drawWidth = sourceWidth * drawScale
+        val drawHeight = sourceHeight * drawScale
+        val extraX = max(drawWidth - outputWidth, 0f)
+        val extraY = max(drawHeight - outputHeight, 0f)
+        val left = (outputWidth - drawWidth) / 2f + transform.safeOffsetX * extraX / 2f
+        val top = (outputHeight - drawHeight) / 2f + transform.safeOffsetY * extraY / 2f
+        return RectF(left, top, left + drawWidth, top + drawHeight)
     }
 
     private fun saveTile(
@@ -112,15 +239,15 @@ object MosaicCutter {
     ): CutTileResult {
         val resolver = context.contentResolver
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.jpg")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.$OutputExtension")
+            put(MediaStore.Images.Media.MIME_TYPE, OutputMimeType)
             put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/PhotoGridPlanner")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             ?: error("Impossibile creare il file in Galleria.")
         resolver.openOutputStream(uri)?.use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
         } ?: error("Impossibile scrivere il file in Galleria.")
 
         values.clear()
@@ -130,7 +257,7 @@ object MosaicCutter {
             publishIndex = publishIndex,
             row = row,
             column = column,
-            displayName = "$displayName.jpg",
+            displayName = "$displayName.$OutputExtension",
             uri = uri,
             file = null,
         )
@@ -147,9 +274,9 @@ object MosaicCutter {
         val baseDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
             ?: context.filesDir
         val outputDir = File(baseDir, "PhotoGridPlanner/Cuts").apply { mkdirs() }
-        val file = File(outputDir, "$displayName.jpg")
+        val file = File(outputDir, "$displayName.$OutputExtension")
         FileOutputStream(file).use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
         }
         return CutTileResult(
             publishIndex = publishIndex,

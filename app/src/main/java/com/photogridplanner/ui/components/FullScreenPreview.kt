@@ -1,16 +1,33 @@
 package com.photogridplanner.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,39 +42,184 @@ fun FullScreenPreview(
     uri: String,
     onDismiss: () -> Unit,
 ) {
+    FullScreenPreview(
+        uris = listOf(uri),
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+fun FullScreenPreview(
+    uris: List<String>,
+    onDismiss: () -> Unit,
+) {
+    if (uris.isEmpty()) return
+
+    val pagerState = rememberPagerState(pageCount = { uris.size })
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .clickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black,
         ) {
-            AsyncUriImage(
-                uri = uri,
-                contentScale = ContentScale.Fit,
-                maxSize = 4096,
-                modifier = Modifier.fillMaxSize(),
-            )
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(18.dp)
-                    .size(48.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
-                        shape = MaterialTheme.shapes.medium,
-                    ),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = "Chiudi",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(62.dp)
+                        .padding(start = 14.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        modifier = Modifier.size(34.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "PG",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "photo.grid",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                        )
+                        Text(
+                            text = if (uris.size > 1) {
+                                "Carosello ${pagerState.currentPage + 1}/${uris.size}"
+                            } else {
+                                "Post"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.68f),
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Rounded.MoreHoriz,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.86f),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(24.dp),
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(
+                                color = Color.White.copy(alpha = 0.10f),
+                                shape = RoundedCornerShape(999.dp),
+                            ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Chiudi",
+                            tint = Color.White,
+                        )
+                    }
+                }
+
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) { page ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AsyncUriImage(
+                            uri = uris[page],
+                            contentScale = ContentScale.Fit,
+                            maxSize = 4096,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (uris.size > 1) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            uris.forEachIndexed { index, _ ->
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 3.dp)
+                                        .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                                        .background(
+                                            color = if (index == pagerState.currentPage) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                Color.White.copy(alpha = 0.36f)
+                                            },
+                                            shape = CircleShape,
+                                        ),
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Icon(
+                                imageVector = Icons.Rounded.FavoriteBorder,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(27.dp),
+                            )
+                            Icon(
+                                imageVector = Icons.Rounded.ChatBubbleOutline,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(27.dp),
+                            )
+                            Icon(
+                                imageVector = Icons.Rounded.Send,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Rounded.BookmarkBorder,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(27.dp),
+                        )
+                    }
+                    Text(
+                        text = "photo.grid  Anteprima post del layout. Qui controlli continuita, tagli e caroselli prima di pubblicare.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                    )
+                    Text(
+                        text = "Visualizzazione locale, nessuna connessione a Instagram.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.58f),
+                    )
+                }
             }
         }
     }

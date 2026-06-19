@@ -5,35 +5,27 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.photogridplanner.data.DefaultPlaceholderColor
 import com.photogridplanner.data.GridPost
-import com.photogridplanner.data.InstagramPost
 import com.photogridplanner.data.PlannerData
 import com.photogridplanner.data.PlannerRepository
+import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PostKind
 import com.photogridplanner.data.PreviewMode
-import com.photogridplanner.instagram.InstagramApi
-import kotlinx.coroutines.flow.MutableStateFlow
+import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class InstagramSyncState(
-    val loading: Boolean = false,
-    val message: String? = null,
-)
-
 class PlannerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = PlannerRepository(application.applicationContext)
-    private val _instagramSyncState = MutableStateFlow(InstagramSyncState())
 
     val state: StateFlow<PlannerData> = repository.data.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
         initialValue = PlannerData(),
     )
-    val instagramSyncState: StateFlow<InstagramSyncState> = _instagramSyncState.asStateFlow()
 
     fun addImages(uris: List<Uri>) {
         persistReadAccess(uris)
@@ -42,8 +34,23 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun addPlaceholder() {
-        viewModelScope.launch { repository.addPlaceholder() }
+    fun addCarousel(uris: List<Uri>) {
+        persistReadAccess(uris)
+        viewModelScope.launch {
+            repository.addCarousel(uris.map { it.toString() })
+        }
+    }
+
+    fun addPlaceholder(color: Int = DefaultPlaceholderColor) {
+        viewModelScope.launch { repository.addPlaceholder(color) }
+    }
+
+    fun setPlaceholderColor(id: String, color: Int) {
+        viewModelScope.launch { repository.setPlaceholderColor(id, color) }
+    }
+
+    fun setPlaceholderDetails(id: String, color: Int, label: String, type: PlaceholderType) {
+        viewModelScope.launch { repository.setPlaceholderDetails(id, color, label, type) }
     }
 
     fun deletePost(id: String) {
@@ -63,67 +70,20 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.setPostOrder(posts.map { it.id }) }
     }
 
-    fun connectInstagram(accessToken: String, userId: String) {
-        viewModelScope.launch {
-            repository.setInstagramConnection(accessToken, userId)
-            syncInstagramProfile(accessToken, userId)
-        }
+    fun saveCurrentLayout() {
+        viewModelScope.launch { repository.saveCurrentLayout() }
     }
 
-    fun setInstagramClientId(clientId: String) {
-        viewModelScope.launch { repository.setInstagramClientId(clientId) }
+    fun applySavedLayout(layoutId: String) {
+        viewModelScope.launch { repository.applySavedLayout(layoutId) }
     }
 
-    fun setInstagramClientSecret(clientSecret: String) {
-        viewModelScope.launch { repository.setInstagramClientSecret(clientSecret) }
+    fun deleteSavedLayout(layoutId: String) {
+        viewModelScope.launch { repository.deleteSavedLayout(layoutId) }
     }
 
-    fun saveInstagramCredentials(
-        clientId: String,
-        clientSecret: String,
-        onSaved: () -> Unit,
-    ) {
-        viewModelScope.launch {
-            repository.setInstagramCredentials(clientId, clientSecret)
-            onSaved()
-        }
-    }
-
-    fun syncInstagramProfile(
-        accessToken: String = state.value.instagramAccessToken,
-        userId: String = state.value.instagramUserId,
-    ) {
-        viewModelScope.launch {
-            _instagramSyncState.value = InstagramSyncState(loading = true)
-            runCatching {
-                InstagramApi.fetchPosts(accessToken = accessToken, userId = userId)
-            }.onSuccess { posts ->
-                repository.setInstagramPosts(posts)
-                _instagramSyncState.value = InstagramSyncState(
-                    message = "Sincronizzati ${posts.size} post Instagram.",
-                )
-            }.onFailure { error ->
-                _instagramSyncState.value = InstagramSyncState(
-                    message = error.message ?: "Connessione Instagram non riuscita.",
-                )
-            }
-        }
-    }
-
-    fun setInstagramOrder(posts: List<InstagramPost>) {
-        viewModelScope.launch { repository.setInstagramOrder(posts.map { it.id }) }
-    }
-
-    fun restoreInstagramOriginalOrder() {
-        viewModelScope.launch { repository.restoreInstagramOriginalOrder() }
-    }
-
-    fun saveCurrentProfileLayout() {
-        viewModelScope.launch { repository.saveCurrentProfileLayout() }
-    }
-
-    fun applyProfileLayout(layoutId: String) {
-        viewModelScope.launch { repository.applyProfileLayout(layoutId) }
+    fun renameSavedLayout(layoutId: String, name: String) {
+        viewModelScope.launch { repository.renameSavedLayout(layoutId, name) }
     }
 
     fun setPreviewMode(mode: PreviewMode) {
@@ -138,6 +98,37 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.reset() }
     }
 
+    fun clearLocalGrid() {
+        viewModelScope.launch { repository.clearLocalPosts() }
+    }
+
+    fun setPostSchedule(id: String, date: LocalDate?) {
+        viewModelScope.launch { repository.setPostSchedule(id, date?.toString()) }
+    }
+
+    fun setPostsSchedule(ids: Collection<String>, date: LocalDate?) {
+        if (ids.isEmpty()) return
+        viewModelScope.launch { repository.setPostsSchedule(ids, date?.toString()) }
+    }
+
+    fun autoSchedule(startDate: LocalDate = LocalDate.now().plusDays(1), spacingDays: Int = 1) {
+        viewModelScope.launch { repository.autoSchedule(startDate, spacingDays) }
+    }
+
+    fun clearSchedule() {
+        viewModelScope.launch { repository.clearSchedule() }
+    }
+
+    fun setCalendarDayPlan(date: LocalDate, note: String, recommendedTime: String) {
+        viewModelScope.launch {
+            repository.setCalendarDayPlan(
+                date = date.toString(),
+                note = note,
+                recommendedTime = recommendedTime,
+            )
+        }
+    }
+
     fun exportOrderText(posts: List<GridPost> = state.value.posts): String {
         if (posts.isEmpty()) return "Photo Grid Planner\nNessun post nella griglia."
         return buildString {
@@ -146,7 +137,13 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
             appendLine()
             posts.forEachIndexed { index, post ->
                 val label = when (post.kind) {
-                    PostKind.Image -> post.uri ?: "immagine"
+                    PostKind.Image -> {
+                        if (post.isCarousel) {
+                            "carosello (${post.allMediaUris.size} immagini)"
+                        } else {
+                            post.coverUri ?: "immagine"
+                        }
+                    }
                     PostKind.Placeholder -> "placeholder"
                 }
                 val visibility = if (post.hidden) "nascosto" else "visibile"
@@ -159,7 +156,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         val text = exportOrderText()
         return Intent(Intent.ACTION_SEND)
             .setType("text/plain")
-            .putExtra(Intent.EXTRA_SUBJECT, "Ordine griglia Instagram")
+            .putExtra(Intent.EXTRA_SUBJECT, "Ordine griglia")
             .putExtra(Intent.EXTRA_TEXT, text)
     }
 

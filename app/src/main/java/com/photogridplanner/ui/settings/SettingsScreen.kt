@@ -1,11 +1,8 @@
 package com.photogridplanner.ui.settings
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,36 +18,29 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.photogridplanner.data.PlannerData
-import com.photogridplanner.instagram.InstagramOAuth
+import com.photogridplanner.export.ProjectExporter
 import com.photogridplanner.viewmodel.PlannerViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     state: PlannerData,
@@ -58,16 +48,43 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val syncState by viewModel.instagramSyncState.collectAsState()
-    var clientId by remember { mutableStateOf(state.instagramClientId) }
-    var clientSecret by remember { mutableStateOf(state.instagramClientSecret) }
-
-    LaunchedEffect(state.instagramClientId) {
-        clientId = state.instagramClientId
-    }
-    LaunchedEffect(state.instagramClientSecret) {
-        clientSecret = state.instagramClientSecret
-    }
+    val scope = rememberCoroutineScope()
+    val zipExporter = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip"),
+        onResult = { uri ->
+            uri?.let {
+                scope.launch {
+                    val copied = withContext(Dispatchers.IO) {
+                        ProjectExporter.exportToZip(
+                            context = context,
+                            zipUri = it,
+                            state = state,
+                            orderText = viewModel.exportOrderText(),
+                        )
+                    }
+                    Toast.makeText(context, "ZIP esportato: $copied immagini", Toast.LENGTH_SHORT).show()
+                }
+            }
+        },
+    )
+    val folderExporter = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+        onResult = { uri ->
+            uri?.let {
+                scope.launch {
+                    val copied = withContext(Dispatchers.IO) {
+                        ProjectExporter.exportToFolder(
+                            context = context,
+                            treeUri = it,
+                            state = state,
+                            orderText = viewModel.exportOrderText(),
+                        )
+                    }
+                    Toast.makeText(context, "Cartella esportata: $copied immagini", Toast.LENGTH_SHORT).show()
+                }
+            }
+        },
+    )
 
     Column(
         modifier = modifier
@@ -92,7 +109,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Rounded.Visibility, contentDescription = null)
-                    Text("Mostra post nascosti")
+                    Text("Mostra post oscurati")
                 }
                 Switch(
                     checked = state.showHiddenPosts,
@@ -101,88 +118,9 @@ fun SettingsScreen(
             }
         }
 
-        SettingsPanel(title = "Instagram") {
-            OutlinedTextField(
-                value = clientId,
-                onValueChange = { clientId = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Instagram App Client ID") },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = clientSecret,
-                onValueChange = { clientSecret = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Instagram App Secret") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-            )
-            OutlinedTextField(
-                value = InstagramOAuth.RedirectUri,
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Redirect URI Meta") },
-                singleLine = true,
-                readOnly = true,
-            )
-            OutlinedTextField(
-                value = InstagramOAuth.AppRedirectUri,
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Deep link app") },
-                singleLine = true,
-                readOnly = true,
-            )
-            Button(
-                enabled = clientId.isNotBlank() && clientSecret.isNotBlank() && !syncState.loading,
-                onClick = {
-                    viewModel.saveInstagramCredentials(
-                        clientId = clientId,
-                        clientSecret = clientSecret,
-                    ) {
-                        context.startActivity(
-                            Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse(InstagramOAuth.buildLoginUrl(clientId)),
-                            ),
-                        )
-                    }
-                },
-            ) {
-                if (syncState.loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
-                Spacer(Modifier.size(8.dp))
-                Text(if (syncState.loading) "Sincronizzo..." else "Accedi con Instagram")
-            }
-            OutlinedButton(
-                enabled = state.instagramAccessToken.isNotBlank() && !syncState.loading,
-                onClick = { viewModel.syncInstagramProfile() },
-            ) {
-                Text("Sincronizza profilo")
-            }
-            syncState.message?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        SettingsPanel(title = "Export pacchetto") {
             Text(
-                text = "Configura il Redirect URI Meta nella dashboard. Client ID e App Secret vengono salvati solo sul telefono per completare lo scambio sicuro del codice OAuth.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        SettingsPanel(title = "Export ordine") {
-            Text(
-                text = "${state.posts.size} elementi salvati localmente",
+                text = "Esporta ordine, manifest e immagini originali senza ricodificarle.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -192,35 +130,39 @@ fun SettingsScreen(
             ) {
                 OutlinedButton(
                     enabled = state.posts.isNotEmpty(),
-                    onClick = {
-                        copyOrderToClipboard(context, viewModel.exportOrderText())
-                    },
-                ) {
-                    Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text("Copia")
-                }
-                OutlinedButton(
-                    enabled = state.posts.isNotEmpty(),
-                    onClick = {
-                        context.startActivity(
-                            Intent.createChooser(
-                                viewModel.shareOrderIntent(),
-                                "Esporta ordine",
-                            ),
-                        )
-                    },
+                    onClick = { zipExporter.launch(ProjectExporter.defaultZipName()) },
                 ) {
                     Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Condividi")
+                    Text("File ZIP")
+                }
+                OutlinedButton(
+                    enabled = state.posts.isNotEmpty(),
+                    onClick = { folderExporter.launch(null) },
+                ) {
+                    Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    Text("Cartella")
                 }
             }
         }
 
         SettingsPanel(title = "Progetto") {
             Text(
-                text = "Salvataggio locale DataStore. Il collegamento Instagram resta opzionale e non modifica il profilo reale.",
+                text = "Salvataggio locale DataStore. L'app lavora solo con foto importate dal dispositivo e placeholder.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        SettingsPanel(title = "Copyright") {
+            Text(
+                text = "Photo Grid Planner (c) 2026 Carmine Gallina. Tutti i diritti riservati.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Versione beta privata concessa solo per test. Vietata la redistribuzione, modifica, vendita o ripubblicazione dell'app o dell'APK senza autorizzazione.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -247,10 +189,4 @@ private fun SettingsPanel(
             content()
         }
     }
-}
-
-private fun copyOrderToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(ClipboardManager::class.java)
-    clipboard.setPrimaryClip(ClipData.newPlainText("Ordine griglia Instagram", text))
-    Toast.makeText(context, "Ordine copiato", Toast.LENGTH_SHORT).show()
 }

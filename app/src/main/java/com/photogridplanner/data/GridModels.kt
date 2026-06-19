@@ -6,9 +6,9 @@ enum class PreviewMode(
     val aspectRatio: Float,
 ) {
     Vertical(
-        title = "4:5",
+        title = "Profilo",
         description = "Profilo verticale moderno",
-        aspectRatio = 1080f / 1350f,
+        aspectRatio = 3f / 4f,
     ),
 }
 
@@ -17,55 +17,71 @@ enum class PostKind {
     Placeholder,
 }
 
+enum class PlaceholderType(val label: String, val shortLabel: String) {
+    Shot("Post", "Post"),
+    Mosaic("Mosaico", "Mosaico"),
+    Carousel("Carosello", "Carosello"),
+}
+
+val DefaultPlaceholderColor: Int = 0xFF34363D.toInt()
+
 data class GridPost(
     val id: String,
     val kind: PostKind,
     val uri: String? = null,
+    val mediaUris: List<String> = emptyList(),
+    val placeholderColor: Int = DefaultPlaceholderColor,
+    val placeholderLabel: String = "",
+    val placeholderType: PlaceholderType = PlaceholderType.Shot,
     val hidden: Boolean = false,
+    val scheduledDate: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-)
-
-data class InstagramPost(
-    val id: String,
-    val mediaUrl: String,
-    val thumbnailUrl: String? = null,
-    val caption: String? = null,
-    val permalink: String? = null,
-    val timestamp: String? = null,
-    val mediaType: String? = null,
 ) {
-    val displayUrl: String
-        get() = thumbnailUrl ?: mediaUrl
+    val allMediaUris: List<String>
+        get() = when {
+            mediaUris.isNotEmpty() -> mediaUris
+            !uri.isNullOrBlank() -> listOf(uri)
+            else -> emptyList()
+        }
+
+    val coverUri: String?
+        get() = allMediaUris.firstOrNull()
+
+    val isCarousel: Boolean
+        get() = allMediaUris.size > 1
+
+    val placeholderDisplayLabel: String
+        get() = placeholderLabel.ifBlank { placeholderType.label }
 }
 
-data class ProfileLayout(
+data class SavedLayout(
     val id: String,
     val name: String,
-    val postIds: List<String>,
+    val postIds: List<String> = emptyList(),
+    val posts: List<GridPost> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
+) {
+    val itemCount: Int
+        get() = if (posts.isNotEmpty()) posts.size else postIds.size
+}
+
+data class CalendarDayPlan(
+    val date: String,
+    val note: String = "",
+    val recommendedTime: String = "",
 )
 
 data class PlannerData(
     val posts: List<GridPost> = emptyList(),
     val previewMode: PreviewMode = PreviewMode.Vertical,
     val showHiddenPosts: Boolean = true,
-    val instagramAccessToken: String = "",
-    val instagramClientId: String = "",
-    val instagramClientSecret: String = "",
-    val instagramUserId: String = "me",
-    val instagramPosts: List<InstagramPost> = emptyList(),
-    val instagramOrder: List<String> = emptyList(),
-    val savedProfileLayouts: List<ProfileLayout> = emptyList(),
+    val savedLayouts: List<SavedLayout> = emptyList(),
+    val calendarPlans: List<CalendarDayPlan> = emptyList(),
 ) {
     val visiblePosts: List<GridPost>
         get() = if (showHiddenPosts) posts else posts.filterNot { it.hidden }
 
-    val orderedInstagramPosts: List<InstagramPost>
-        get() {
-            if (instagramOrder.isEmpty()) return instagramPosts
-            val byId = instagramPosts.associateBy { it.id }
-            val ordered = instagramOrder.mapNotNull { byId[it] }
-            val orderedIds = ordered.map { it.id }.toSet()
-            return ordered + instagramPosts.filterNot { it.id in orderedIds }
-        }
+    fun calendarPlanFor(date: String): CalendarDayPlan? {
+        return calendarPlans.firstOrNull { it.date == date }
+    }
 }
