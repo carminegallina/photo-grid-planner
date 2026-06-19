@@ -1,5 +1,8 @@
 package com.photogridplanner.ui.grid
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -246,8 +249,8 @@ fun GridScreen(
     deleteLayout?.let { layout ->
         AlertDialog(
             onDismissRequest = { deleteLayout = null },
-            title = { Text("Elimina layout") },
-            text = { Text("Vuoi eliminare \"${layout.name}\"? La griglia attuale non verra modificata.") },
+            title = { LocalizedText("Elimina layout") },
+            text = { LocalizedText("Vuoi eliminare \"${layout.name}\"? La griglia attuale non verra modificata.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -255,12 +258,12 @@ fun GridScreen(
                         deleteLayout = null
                     },
                 ) {
-                    Text("Elimina")
+                    LocalizedText("Elimina")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteLayout = null }) {
-                    Text("Annulla")
+                    LocalizedText("Annulla")
                 }
             },
         )
@@ -280,8 +283,8 @@ fun GridScreen(
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
-            title = { Text("Svuota griglia") },
-            text = { Text("Tutte le foto e i placeholder nella griglia verranno rimossi. I layout salvati restano disponibili.") },
+            title = { LocalizedText("Svuota griglia") },
+            text = { LocalizedText("Tutte le foto e i placeholder nella griglia verranno rimossi. I layout salvati restano disponibili.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -289,12 +292,12 @@ fun GridScreen(
                         viewModel.clearLocalGrid()
                     },
                 ) {
-                    Text("Svuota")
+                    LocalizedText("Svuota")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmReset = false }) {
-                    Text("Annulla")
+                    LocalizedText("Annulla")
                 }
             },
         )
@@ -309,6 +312,7 @@ private fun GridActionDock(
     onImport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = modifier.animateContentSize(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
@@ -324,25 +328,25 @@ private fun GridActionDock(
         ) {
             DockIconButton(
                 icon = Icons.Rounded.RestartAlt,
-                contentDescription = "Svuota griglia",
+                contentDescription = strings.t("Svuota griglia"),
                 tint = MaterialTheme.colorScheme.tertiary,
                 onClick = onReset,
             )
             DockIconButton(
                 icon = Icons.Rounded.Save,
-                contentDescription = "Salva layout",
+                contentDescription = strings.t("Salva layout"),
                 tint = MaterialTheme.colorScheme.primary,
                 onClick = onSave,
             )
             DockIconButton(
                 icon = Icons.Rounded.Image,
-                contentDescription = "Aggiungi placeholder",
+                contentDescription = strings.t("Aggiungi placeholder"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 onClick = onPlaceholder,
             )
             DockIconButton(
                 icon = Icons.Rounded.Add,
-                contentDescription = "Importa immagini",
+                contentDescription = strings.t("Importa immagini"),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 selected = true,
                 onClick = onImport,
@@ -393,7 +397,7 @@ private fun ProfilePreviewHeaderModern(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
+                LocalizedText(
                     text = "photo.grid",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -414,7 +418,7 @@ private fun ProfilePreviewHeaderModern(
                     shape = CircleShape,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
                 ) {
-                    Text(
+                    LocalizedText(
                         text = "+",
                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 3.dp),
                         style = MaterialTheme.typography.titleLarge,
@@ -422,7 +426,7 @@ private fun ProfilePreviewHeaderModern(
                     )
                 }
                 OutlinedButton(onClick = onOpenLayouts) {
-                    Text("Layout $savedLayoutCount", maxLines = 1)
+                    LocalizedText("Layout $savedLayoutCount", maxLines = 1)
                 }
             }
         }
@@ -442,7 +446,7 @@ private fun ProfilePreviewHeaderModern(
                 ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
+                    LocalizedText(
                         text = "PG",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -460,12 +464,12 @@ private fun ProfilePreviewHeaderModern(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
+            LocalizedText(
                 text = "Photo Grid Planner",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
-            Text(
+            LocalizedText(
                 text = "Fotografia, palette e composizioni in anteprima.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -536,13 +540,13 @@ private fun ProfilePreviewHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
+                    LocalizedText(
                         text = "photo.grid",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
-                    Text(
-                        text = "⌄",
+                    LocalizedText(
+                        text = "âŒ„",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -551,13 +555,13 @@ private fun ProfilePreviewHeader(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    LocalizedText(
                         text = "+",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     OutlinedButton(onClick = onOpenLayouts) {
-                        Text("Layout $savedLayoutCount")
+                        LocalizedText("Layout $savedLayoutCount")
                     }
                 }
             }
@@ -577,7 +581,7 @@ private fun ProfilePreviewHeader(
                     ),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(
+                        LocalizedText(
                             text = "PG",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -595,12 +599,12 @@ private fun ProfilePreviewHeader(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
+                LocalizedText(
                     text = "Photo Grid Planner",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Text(
+                LocalizedText(
                     text = "Fotografia, palette e composizioni in anteprima.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -664,14 +668,14 @@ private fun ProfileHighlight(label: String) {
             ),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(
+                LocalizedText(
                     text = label.take(1),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-        Text(
+        LocalizedText(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -689,7 +693,7 @@ private fun ProfileTab(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        icon?.invoke() ?: Text(
+        icon?.invoke() ?: LocalizedText(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -707,12 +711,12 @@ private fun ProfileTab(
 @Composable
 private fun ProfileStat(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
+        LocalizedText(
             text = value,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
-        Text(
+        LocalizedText(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -732,7 +736,7 @@ private fun ProfileButton(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(
+            LocalizedText(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -759,7 +763,7 @@ private fun EmptyGrid(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(42.dp),
             )
-            Text(
+            LocalizedText(
                 text = "Tocca + per importare immagini o aggiungere placeholder",
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -776,22 +780,22 @@ private fun ImportChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Importa $count immagini") },
+        title = { LocalizedText("Importa $count immagini") },
         text = {
-            Text("Scegli come inserirle nella griglia.")
+            LocalizedText("Scegli come inserirle nella griglia.")
         },
         confirmButton = {
             TextButton(onClick = onCarousel) {
-                Text("Carosello")
+                LocalizedText("Carosello")
             }
         },
         dismissButton = {
             Row {
                 TextButton(onClick = onDismiss) {
-                    Text("Annulla")
+                    LocalizedText("Annulla")
                 }
                 TextButton(onClick = onMosaic) {
-                    Text("Mosaico")
+                    LocalizedText("Mosaico")
                 }
             }
         },
@@ -809,10 +813,10 @@ private fun LayoutsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Layout salvati") },
+        title = { LocalizedText("Layout salvati") },
         text = {
             if (layouts.isEmpty()) {
-                Text("Nessun layout salvato.")
+                LocalizedText("Nessun layout salvato.")
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -836,17 +840,17 @@ private fun LayoutsDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
+                                        LocalizedText(
                                             text = layout.name,
                                             style = MaterialTheme.typography.bodyLarge,
                                         )
-                                        Text(
+                                        LocalizedText(
                                             text = "${layout.itemCount} elementi",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    Text(
+                                    LocalizedText(
                                         text = formatLayoutDate(layout.createdAt),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -860,10 +864,10 @@ private fun LayoutsDialog(
                                 ) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                         TextButton(onClick = { onApply(layout) }) {
-                                            Text("Apri")
+                                            LocalizedText("Apri")
                                         }
                                         TextButton(onClick = { onCompare(layout) }) {
-                                            Text("Confronta")
+                                            LocalizedText("Confronta")
                                         }
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -892,7 +896,7 @@ private fun LayoutsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Chiudi")
+                LocalizedText("Chiudi")
             }
         },
     )
@@ -933,14 +937,14 @@ private fun RenameLayoutDialog(
     var name by remember(layout.id) { mutableStateOf(layout.name) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rinomina layout") },
+        title = { LocalizedText("Rinomina layout") },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.take(48) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Nome layout") },
+                label = { LocalizedText("Nome layout") },
             )
         },
         confirmButton = {
@@ -948,12 +952,12 @@ private fun RenameLayoutDialog(
                 enabled = name.trim().isNotBlank(),
                 onClick = { onSave(name) },
             ) {
-                Text("Salva")
+                LocalizedText("Salva")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                LocalizedText("Annulla")
             }
         },
     )
@@ -979,7 +983,7 @@ private fun PlaceholderEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Placeholder") },
+        title = { LocalizedText("Placeholder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 OutlinedTextField(
@@ -991,16 +995,16 @@ private fun PlaceholderEditorDialog(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Nome personalizzato") },
+                    label = { LocalizedText("Nome personalizzato") },
                     singleLine = true,
                 )
-                Text(
+                LocalizedText(
                     text = "Se inserisci un nome, il tipo viene deselezionato. Se scegli un tipo, il nome viene cancellato.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Tipo", style = MaterialTheme.typography.titleSmall)
+                    LocalizedText("Tipo", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PlaceholderType.entries.forEach { option ->
                             FilterChip(
@@ -1009,13 +1013,13 @@ private fun PlaceholderEditorDialog(
                                     selectedType = option
                                     label = ""
                                 },
-                                label = { Text(option.label) },
+                                label = { LocalizedText(option.label) },
                             )
                         }
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Preset neutri", style = MaterialTheme.typography.titleSmall)
+                    LocalizedText("Preset neutri", style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PlaceholderPresetColors.forEach { preset ->
                             Surface(
@@ -1041,12 +1045,12 @@ private fun PlaceholderEditorDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(color, label, selectedType ?: post.placeholderType) }) {
-                Text("Salva")
+                LocalizedText("Salva")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                LocalizedText("Annulla")
             }
         },
     )
@@ -1064,7 +1068,7 @@ private fun CompareLayoutsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confronto layout") },
+        title = { LocalizedText("Confronto layout") },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 560.dp),
@@ -1109,7 +1113,7 @@ private fun CompareLayoutsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Chiudi")
+                LocalizedText("Chiudi")
             }
         },
     )
@@ -1125,12 +1129,12 @@ private fun CompareHeader(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
+        LocalizedText(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Text(
+        LocalizedText(
             text = "$count elementi",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1181,7 +1185,7 @@ private fun MiniPostTile(
                     .background(Color(post.placeholderColor)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                LocalizedText(
                     text = post.placeholderDisplayLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.72f),

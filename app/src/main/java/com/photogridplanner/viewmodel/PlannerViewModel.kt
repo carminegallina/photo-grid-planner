@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.photogridplanner.data.AppLanguage
 import com.photogridplanner.data.DefaultPlaceholderColor
 import com.photogridplanner.data.GridPost
 import com.photogridplanner.data.PlannerData
@@ -98,6 +99,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.setShowTutorialOnLaunch(show) }
     }
 
+    fun setLanguage(language: AppLanguage) {
+        viewModelScope.launch { repository.setLanguage(language) }
+    }
+
     fun resetProject() {
         viewModelScope.launch { repository.reset() }
     }
@@ -134,23 +139,44 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun exportOrderText(posts: List<GridPost> = state.value.posts): String {
-        if (posts.isEmpty()) return "Photo Grid Planner\nNessun post nella griglia."
+        val english = state.value.language == AppLanguage.English
+        if (posts.isEmpty()) {
+            return if (english) {
+                "Photo Grid Planner\nNo posts in the grid."
+            } else {
+                "Photo Grid Planner\nNessun post nella griglia."
+            }
+        }
         return buildString {
-            appendLine("Photo Grid Planner - ordine post")
-            appendLine("Pubblica dal basso a destra verso l'alto a sinistra se stai componendo un mosaico.")
+            appendLine(
+                if (english) "Photo Grid Planner - post order"
+                else "Photo Grid Planner - ordine post",
+            )
+            appendLine(
+                if (english) {
+                    "Publish from bottom right to top left if you are composing a mosaic."
+                } else {
+                    "Pubblica dal basso a destra verso l'alto a sinistra se stai componendo un mosaico."
+                },
+            )
             appendLine()
             posts.forEachIndexed { index, post ->
                 val label = when (post.kind) {
                     PostKind.Image -> {
                         if (post.isCarousel) {
-                            "carosello (${post.allMediaUris.size} immagini)"
+                            if (english) "carousel (${post.allMediaUris.size} images)"
+                            else "carosello (${post.allMediaUris.size} immagini)"
                         } else {
-                            post.coverUri ?: "immagine"
+                            post.coverUri ?: if (english) "image" else "immagine"
                         }
                     }
                     PostKind.Placeholder -> "placeholder"
                 }
-                val visibility = if (post.hidden) "nascosto" else "visibile"
+                val visibility = if (post.hidden) {
+                    if (english) "hidden" else "nascosto"
+                } else {
+                    if (english) "visible" else "visibile"
+                }
                 appendLine("${index + 1}. [$visibility] $label")
             }
         }
@@ -160,7 +186,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         val text = exportOrderText()
         return Intent(Intent.ACTION_SEND)
             .setType("text/plain")
-            .putExtra(Intent.EXTRA_SUBJECT, "Ordine griglia")
+            .putExtra(
+                Intent.EXTRA_SUBJECT,
+                if (state.value.language == AppLanguage.English) "Grid order" else "Ordine griglia",
+            )
             .putExtra(Intent.EXTRA_TEXT, text)
     }
 

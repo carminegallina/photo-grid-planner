@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.components
 
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -96,7 +98,7 @@ fun GridPostTile(
                         modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.size(4.dp))
-                    Text(
+                    LocalizedText(
                         text = post.allMediaUris.size.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
@@ -138,7 +140,7 @@ fun GridPostTile(
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
-                    Text(
+                    LocalizedText(
                         text = "Nascosto",
                         modifier = Modifier.padding(start = 6.dp),
                         style = MaterialTheme.typography.labelSmall,
@@ -154,7 +156,7 @@ fun GridPostTile(
         ) {
             if (post.kind == PostKind.Placeholder) {
                 DropdownMenuItem(
-                    text = { Text("Modifica placeholder") },
+                    text = { LocalizedText("Modifica placeholder") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Rounded.Edit,
@@ -169,7 +171,7 @@ fun GridPostTile(
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text("Colore placeholder")
+                            LocalizedText("Colore placeholder")
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -199,7 +201,7 @@ fun GridPostTile(
                 )
             }
             DropdownMenuItem(
-                text = { Text(if (post.hidden) "Mostra nella preview" else "Oscura dalla preview") },
+                text = { LocalizedText(if (post.hidden) "Mostra nella preview" else "Oscura dalla preview") },
                 leadingIcon = {
                     Icon(
                         imageVector = if (post.hidden) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
@@ -212,7 +214,7 @@ fun GridPostTile(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Elimina") },
+                text = { LocalizedText("Elimina") },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
@@ -243,7 +245,7 @@ private fun PlaceholderTile(
             color = Color.White.copy(alpha = 0.12f),
             shape = RoundedCornerShape(999.dp),
         ) {
-            Text(
+            LocalizedText(
                 text = label,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.labelSmall,

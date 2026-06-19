@@ -1,5 +1,7 @@
 package com.photogridplanner.ui
 
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -31,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +49,8 @@ import com.photogridplanner.ui.analysis.FeedAnalysisScreen
 import com.photogridplanner.ui.calendar.CalendarScreen
 import com.photogridplanner.ui.cutter.CutterScreen
 import com.photogridplanner.ui.grid.GridScreen
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.appStringsFor
 import com.photogridplanner.ui.settings.SettingsScreen
 import com.photogridplanner.ui.tutorial.AppTutorialDialog
 import com.photogridplanner.viewmodel.PlannerViewModel
@@ -74,123 +79,127 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
     var tutorialDismissedThisLaunch by rememberSaveable { mutableStateOf(false) }
     var forceTutorial by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        bottomBar = {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
-                tonalElevation = 0.dp,
-            ) {
-                NavigationBar(
-                    modifier = Modifier.height(66.dp),
-                    containerColor = Color.Transparent,
+    CompositionLocalProvider(
+        LocalAppStrings provides appStringsFor(state.language),
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            bottomBar = {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = RoundedCornerShape(28.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
                     tonalElevation = 0.dp,
                 ) {
-                    AppNavItem(
-                        selected = currentDestination == Destination.Grid,
-                        onClick = { currentDestination = Destination.Grid },
-                        icon = Icons.Rounded.ViewModule,
-                        label = Destination.Grid.label,
+                    NavigationBar(
+                        modifier = Modifier.height(66.dp),
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        tonalElevation = 0.dp,
+                    ) {
+                        AppNavItem(
+                            selected = currentDestination == Destination.Grid,
+                            onClick = { currentDestination = Destination.Grid },
+                            icon = Icons.Rounded.ViewModule,
+                            label = Destination.Grid.label,
+                        )
+                        AppNavItem(
+                            selected = currentDestination == Destination.Analysis,
+                            onClick = { currentDestination = Destination.Analysis },
+                            icon = Icons.Rounded.Analytics,
+                            label = Destination.Analysis.label,
+                        )
+                        AppNavItem(
+                            selected = currentDestination == Destination.Calendar,
+                            onClick = { currentDestination = Destination.Calendar },
+                            icon = Icons.Rounded.DateRange,
+                            label = Destination.Calendar.label,
+                        )
+                        AppNavItem(
+                            selected = currentDestination == Destination.Cutter,
+                            onClick = { currentDestination = Destination.Cutter },
+                            icon = Icons.Rounded.ContentCut,
+                            label = Destination.Cutter.label,
+                        )
+                        AppNavItem(
+                            selected = currentDestination == Destination.Settings,
+                            onClick = { currentDestination = Destination.Settings },
+                            icon = Icons.Rounded.Settings,
+                            label = Destination.Settings.label,
+                        )
+                    }
+                }
+            },
+        ) { padding ->
+            AnimatedContent(
+                targetState = currentDestination,
+                label = "screen_transition",
+                transitionSpec = {
+                    val direction = if (targetState.index > initialState.index) 1 else -1
+                    (
+                        fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
+                            slideInHorizontally(
+                                animationSpec = tween(320, easing = FastOutSlowInEasing),
+                                initialOffsetX = { fullWidth -> fullWidth / 9 * direction },
+                            )
+                        ).togetherWith(
+                            fadeOut(animationSpec = tween(190, easing = FastOutSlowInEasing)) +
+                                slideOutHorizontally(
+                                    animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                    targetOffsetX = { fullWidth -> -fullWidth / 12 * direction },
+                                ),
+                        ).using(SizeTransform(clip = false))
+                },
+            ) { destination ->
+                when (destination) {
+                    Destination.Grid -> GridScreen(
+                        state = state,
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(padding),
                     )
-                    AppNavItem(
-                        selected = currentDestination == Destination.Analysis,
-                        onClick = { currentDestination = Destination.Analysis },
-                        icon = Icons.Rounded.Analytics,
-                        label = Destination.Analysis.label,
+
+                    Destination.Calendar -> CalendarScreen(
+                        state = state,
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(padding),
                     )
-                    AppNavItem(
-                        selected = currentDestination == Destination.Calendar,
-                        onClick = { currentDestination = Destination.Calendar },
-                        icon = Icons.Rounded.DateRange,
-                        label = Destination.Calendar.label,
+
+                    Destination.Analysis -> FeedAnalysisScreen(
+                        state = state,
+                        modifier = Modifier.padding(padding),
                     )
-                    AppNavItem(
-                        selected = currentDestination == Destination.Cutter,
-                        onClick = { currentDestination = Destination.Cutter },
-                        icon = Icons.Rounded.ContentCut,
-                        label = Destination.Cutter.label,
+
+                    Destination.Cutter -> CutterScreen(
+                        modifier = Modifier.padding(padding),
                     )
-                    AppNavItem(
-                        selected = currentDestination == Destination.Settings,
-                        onClick = { currentDestination = Destination.Settings },
-                        icon = Icons.Rounded.Settings,
-                        label = Destination.Settings.label,
+
+                    Destination.Settings -> SettingsScreen(
+                        state = state,
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(padding),
+                        onShowTutorial = { forceTutorial = true },
                     )
                 }
-            }
-        },
-    ) { padding ->
-        AnimatedContent(
-            targetState = currentDestination,
-            label = "screen_transition",
-            transitionSpec = {
-                val direction = if (targetState.index > initialState.index) 1 else -1
-                (
-                    fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
-                        slideInHorizontally(
-                            animationSpec = tween(320, easing = FastOutSlowInEasing),
-                            initialOffsetX = { fullWidth -> fullWidth / 9 * direction },
-                        )
-                    ).togetherWith(
-                        fadeOut(animationSpec = tween(190, easing = FastOutSlowInEasing)) +
-                            slideOutHorizontally(
-                                animationSpec = tween(260, easing = FastOutSlowInEasing),
-                                targetOffsetX = { fullWidth -> -fullWidth / 12 * direction },
-                            ),
-                    ).using(SizeTransform(clip = false))
-            },
-        ) { destination ->
-            when (destination) {
-                Destination.Grid -> GridScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    modifier = Modifier.padding(padding),
-                )
-
-                Destination.Calendar -> CalendarScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    modifier = Modifier.padding(padding),
-                )
-
-                Destination.Analysis -> FeedAnalysisScreen(
-                    state = state,
-                    modifier = Modifier.padding(padding),
-                )
-
-                Destination.Cutter -> CutterScreen(
-                    modifier = Modifier.padding(padding),
-                )
-
-                Destination.Settings -> SettingsScreen(
-                    state = state,
-                    viewModel = viewModel,
-                    modifier = Modifier.padding(padding),
-                    onShowTutorial = { forceTutorial = true },
-                )
             }
         }
-    }
 
-    if ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial) {
-        AppTutorialDialog(
-            onClose = { dontShowAgain ->
-                tutorialDismissedThisLaunch = true
-                forceTutorial = false
-                if (dontShowAgain) {
-                    viewModel.setShowTutorialOnLaunch(false)
-                }
-            },
-        )
+        if ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial) {
+            AppTutorialDialog(
+                onClose = { dontShowAgain ->
+                    tutorialDismissedThisLaunch = true
+                    forceTutorial = false
+                    if (dontShowAgain) {
+                        viewModel.setShowTutorialOnLaunch(false)
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -219,7 +228,7 @@ private fun RowScope.AppNavItem(
 
 @Composable
 private fun NavLabel(text: String) {
-    Text(
+    LocalizedText(
         text = text,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

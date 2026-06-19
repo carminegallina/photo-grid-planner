@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.tutorial
 
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -24,10 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Analytics
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Shield
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -126,9 +124,9 @@ fun AppTutorialDialog(
         onDismissRequest = { onClose(dontShowAgain) },
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Guida rapida")
-                Text(
-                    text = "Scorri oppure usa i pulsanti",
+                LocalizedText("Guida rapida")
+                LocalizedText(
+                    text = "Scorri oppure usa Avanti",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -206,7 +204,7 @@ fun AppTutorialDialog(
                             checked = dontShowAgain,
                             onCheckedChange = { dontShowAgain = it },
                         )
-                        Text(
+                        LocalizedText(
                             text = "Non mostrare piu all'avvio",
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -224,7 +222,7 @@ fun AppTutorialDialog(
                     }
                 },
             ) {
-                Text(if (page < lastPage) "Avanti" else "Fine")
+                LocalizedText(if (page < lastPage) "Avanti" else "Fine")
             }
         },
         dismissButton = {
@@ -232,20 +230,14 @@ fun AppTutorialDialog(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                IconButton(
+                TextButton(
                     enabled = page > 0,
                     onClick = ::goPrevious,
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = "Pagina precedente")
-                }
-                IconButton(
-                    enabled = page < lastPage,
-                    onClick = ::goNext,
-                ) {
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = "Pagina successiva")
+                    LocalizedText("Indietro")
                 }
                 OutlinedButton(onClick = { onClose(dontShowAgain) }) {
-                    Text("Salta")
+                    LocalizedText("Salta")
                 }
             }
         },
@@ -264,48 +256,29 @@ private fun TutorialPageContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         TutorialVisual(page = page, pageIndex = index)
-        Text(
+        LocalizedText(
             text = page.eyebrow.uppercase(),
             style = MaterialTheme.typography.labelLarge,
             color = page.accent,
             fontWeight = FontWeight.SemiBold,
         )
-        Text(
+        LocalizedText(
             text = page.title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
-        Text(
+        LocalizedText(
             text = page.body,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Text(
+        LocalizedText(
             text = "${index + 1} di $total",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (index == total - 1) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = page.accent,
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(
-                    text = "Pronto per pianificare il feed",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = page.accent,
-                )
-            }
-        }
     }
 }
 

@@ -311,9 +311,16 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(showTutorialOnLaunch = show) }
     }
 
+    suspend fun setLanguage(language: AppLanguage) {
+        updateData { current -> current.copy(language = language) }
+    }
+
     suspend fun reset() {
         updateData { current ->
-            PlannerData(showTutorialOnLaunch = current.showTutorialOnLaunch)
+            PlannerData(
+                showTutorialOnLaunch = current.showTutorialOnLaunch,
+                language = current.language,
+            )
         }
     }
 
@@ -324,6 +331,7 @@ class PlannerRepository(context: Context) {
             preferences[Keys.PreviewMode] = next.previewMode.name
             preferences[Keys.ShowHiddenPosts] = next.showHiddenPosts
             preferences[Keys.ShowTutorialOnLaunch] = next.showTutorialOnLaunch
+            preferences[Keys.AppLanguage] = next.language.name
             preferences[Keys.SavedLayoutsJson] = encodeSavedLayouts(next.savedLayouts)
             preferences[Keys.CalendarPlansJson] = encodeCalendarPlans(next.calendarPlans)
         }
@@ -339,6 +347,9 @@ class PlannerRepository(context: Context) {
             previewMode = mode,
             showHiddenPosts = this[Keys.ShowHiddenPosts] ?: true,
             showTutorialOnLaunch = this[Keys.ShowTutorialOnLaunch] ?: true,
+            language = runCatching {
+                AppLanguage.valueOf(this[Keys.AppLanguage] ?: defaultAppLanguageForDevice().name)
+            }.getOrDefault(defaultAppLanguageForDevice()),
             savedLayouts = decodeSavedLayouts(
                 this[Keys.SavedLayoutsJson].orEmpty()
                     .ifBlank { this[Keys.LegacySavedProfileLayoutsJson].orEmpty() },
@@ -483,6 +494,7 @@ class PlannerRepository(context: Context) {
         val PreviewMode = stringPreferencesKey("preview_mode")
         val ShowHiddenPosts = booleanPreferencesKey("show_hidden_posts")
         val ShowTutorialOnLaunch = booleanPreferencesKey("show_tutorial_on_launch")
+        val AppLanguage = stringPreferencesKey("app_language")
         val SavedLayoutsJson = stringPreferencesKey("saved_layouts_json")
         val LegacySavedProfileLayoutsJson = stringPreferencesKey("saved_profile_layouts_json")
         val CalendarPlansJson = stringPreferencesKey("calendar_plans_json")

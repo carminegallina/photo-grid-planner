@@ -1,5 +1,8 @@
 package com.photogridplanner.ui.settings
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.photogridplanner.data.AppLanguage
 import com.photogridplanner.data.PlannerData
 import com.photogridplanner.export.ProjectExporter
 import com.photogridplanner.viewmodel.PlannerViewModel
@@ -53,6 +58,7 @@ fun SettingsScreen(
     onShowTutorial: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val scope = rememberCoroutineScope()
     val zipExporter = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
@@ -67,7 +73,7 @@ fun SettingsScreen(
                             orderText = viewModel.exportOrderText(),
                         )
                     }
-                    Toast.makeText(context, "ZIP esportato: $copied immagini", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strings.t("ZIP esportato: $copied immagini"), Toast.LENGTH_SHORT).show()
                 }
             }
         },
@@ -85,7 +91,7 @@ fun SettingsScreen(
                             orderText = viewModel.exportOrderText(),
                         )
                     }
-                    Toast.makeText(context, "Cartella esportata: $copied immagini", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strings.t("Cartella esportata: $copied immagini"), Toast.LENGTH_SHORT).show()
                 }
             }
         },
@@ -98,7 +104,7 @@ fun SettingsScreen(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
+        LocalizedText(
             text = "Impostazioni",
             style = MaterialTheme.typography.headlineMedium,
         )
@@ -114,7 +120,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Rounded.Visibility, contentDescription = null)
-                    Text("Mostra post oscurati")
+                    LocalizedText("Mostra post oscurati")
                 }
                 Switch(
                     checked = state.showHiddenPosts,
@@ -135,7 +141,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Rounded.Info, contentDescription = null)
-                    Text("Mostra tutorial all'avvio")
+                    LocalizedText("Mostra tutorial all'avvio")
                 }
                 Switch(
                     checked = state.showTutorialOnLaunch,
@@ -145,7 +151,32 @@ fun SettingsScreen(
             OutlinedButton(onClick = onShowTutorial) {
                 Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(8.dp))
-                Text("Apri tutorial")
+                LocalizedText("Apri tutorial")
+            }
+        }
+
+        SettingsPanel(title = "Lingua") {
+            LocalizedText(
+                text = "Scegli la lingua dell'app.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LocalizedText(
+                text = "Rilevata automaticamente al primo avvio: italiano per dispositivi in italiano, inglese per tutte le altre lingue.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppLanguage.values().forEach { language ->
+                    FilterChip(
+                        selected = state.language == language,
+                        onClick = { viewModel.setLanguage(language) },
+                        label = { LocalizedText(language.label) },
+                    )
+                }
             }
         }
 
@@ -159,7 +190,7 @@ fun SettingsScreen(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )
-                Text(
+                LocalizedText(
                     text = "L'app richiede l'accesso alla libreria fotografica per permetterti di visualizzare, selezionare, organizzare, tagliare e pianificare le immagini nella griglia. Le foto restano sul dispositivo e vengono elaborate localmente. Nessuna immagine viene caricata online o condivisa con terze parti senza una tua azione esplicita.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -168,7 +199,7 @@ fun SettingsScreen(
         }
 
         SettingsPanel(title = "Export pacchetto") {
-            Text(
+            LocalizedText(
                 text = "Esporta ordine, manifest e immagini originali senza ricodificarle.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -183,7 +214,7 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("File ZIP")
+                    LocalizedText("File ZIP")
                 }
                 OutlinedButton(
                     enabled = state.posts.isNotEmpty(),
@@ -191,13 +222,13 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("Cartella")
+                    LocalizedText("Cartella")
                 }
             }
         }
 
         SettingsPanel(title = "Progetto") {
-            Text(
+            LocalizedText(
                 text = "Salvataggio locale DataStore. L'app lavora solo con foto importate dal dispositivo e placeholder.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -205,12 +236,12 @@ fun SettingsScreen(
         }
 
         SettingsPanel(title = "Copyright") {
-            Text(
+            LocalizedText(
                 text = "Photo Grid Planner (c) 2026 Carmine Gallina. Tutti i diritti riservati.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
+            LocalizedText(
                 text = "Versione beta privata concessa solo per test. Vietata la redistribuzione, modifica, vendita o ripubblicazione dell'app o dell'APK senza autorizzazione.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -236,7 +267,7 @@ private fun SettingsPanel(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            LocalizedText(text = title, style = MaterialTheme.typography.titleMedium)
             content()
         }
     }

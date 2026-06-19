@@ -1,5 +1,8 @@
 package com.photogridplanner.ui.cutter
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.Color as AndroidColor
@@ -467,7 +470,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
+        LocalizedText(
             text = "Cutter",
             style = MaterialTheme.typography.headlineMedium,
         )
@@ -784,7 +787,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(8.dp),
             ) {
-                Text(
+                LocalizedText(
                     text = message,
                     modifier = Modifier.padding(14.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -822,7 +825,7 @@ private fun ModeTabs(
             FilterChip(
                 selected = mode == item,
                 onClick = { onModeChange(item) },
-                label = { Text(item.label) },
+                label = { LocalizedText(item.label) },
             )
         }
     }
@@ -838,7 +841,7 @@ private fun SourceModeTabs(
             FilterChip(
                 selected = mode == item,
                 onClick = { onModeChange(item) },
-                label = { Text(item.label) },
+                label = { LocalizedText(item.label) },
             )
         }
     }
@@ -867,11 +870,11 @@ private fun FrameControls(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Cornice", style = MaterialTheme.typography.titleMedium)
+                LocalizedText(text = "Cornice", style = MaterialTheme.typography.titleMedium)
                 FilterChip(
                     selected = enabled,
                     onClick = { onEnabledChange(!enabled) },
-                    label = { Text("Bianca") },
+                    label = { LocalizedText("Bianca") },
                 )
             }
             if (enabled) {
@@ -880,11 +883,11 @@ private fun FrameControls(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    LocalizedText(
                         text = "Spessore",
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    Text(
+                    LocalizedText(
                         text = "${thicknessPercent.roundToInt()}%",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
@@ -919,7 +922,7 @@ private fun MosaicControls(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = "Mosaico", style = MaterialTheme.typography.titleMedium)
+            LocalizedText(text = "Mosaico", style = MaterialTheme.typography.titleMedium)
             IntSliderSetting(
                 label = "Colonne",
                 value = spec.columns,
@@ -954,7 +957,7 @@ private fun CarouselControls(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = "Carosello", style = MaterialTheme.typography.titleMedium)
+            LocalizedText(text = "Carosello", style = MaterialTheme.typography.titleMedium)
             IntSliderSetting(
                 label = "Slide",
                 value = spec.columns,
@@ -995,7 +998,7 @@ private fun TemplateWorkflow(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = "Template", style = MaterialTheme.typography.titleMedium)
+            LocalizedText(text = "Template", style = MaterialTheme.typography.titleMedium)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1004,7 +1007,7 @@ private fun TemplateWorkflow(
                     FilterChip(
                         selected = selectedTemplate.id == template.id,
                         onClick = { onTemplateChange(template) },
-                        label = { Text(template.title) },
+                        label = { LocalizedText(template.title) },
                     )
                 }
             }
@@ -1041,7 +1044,7 @@ private fun BackgroundColorPicker(
     val hsv = colorArgb.toHsv()
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(text = "Sfondo", style = MaterialTheme.typography.bodyLarge)
+        LocalizedText(text = "Sfondo", style = MaterialTheme.typography.bodyLarge)
         VisualColorArea(
             hue = hsv.hue,
             saturation = hsv.saturation,
@@ -1081,7 +1084,7 @@ private fun BackgroundColorPicker(
                     hexText = normalized
                     parseHexColor(normalized)?.let(onColorChange)
                 },
-                label = { Text("Codice colore") },
+                label = { LocalizedText("Codice colore") },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -1273,12 +1276,12 @@ private fun OutputSizeRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        LocalizedText(
             text = "${spec.tileCount} file",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
+        LocalizedText(
             text = "${spec.outputWidth(format)} x ${spec.outputHeight(format)} px",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
@@ -1338,12 +1341,12 @@ private fun PlacementToolbar(
         OutlinedButton(onClick = onImport) {
             Icon(Icons.Rounded.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text(changeLabel)
+            LocalizedText(changeLabel)
         }
         OutlinedButton(onClick = onReset) {
             Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text("Centra")
+            LocalizedText("Centra")
         }
     }
 }
@@ -1361,8 +1364,8 @@ private fun IntSliderSetting(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            Text(
+            LocalizedText(text = label, style = MaterialTheme.typography.bodyLarge)
+            LocalizedText(
                 text = value.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
@@ -1488,7 +1491,7 @@ private fun GestureCropPreview(
                             },
                             enabled = horizontalScrollState.value > 0,
                         ) {
-                            Text("Indietro")
+                            LocalizedText("Indietro")
                         }
                         OutlinedButton(
                             onClick = {
@@ -1500,7 +1503,7 @@ private fun GestureCropPreview(
                             },
                             enabled = horizontalScrollState.value < horizontalScrollState.maxValue,
                         ) {
-                            Text("Avanti")
+                            LocalizedText("Avanti")
                         }
                     }
                 }
@@ -1533,6 +1536,7 @@ private fun TemplateCropPreview(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     var images by remember(template.id) { mutableStateOf<Map<String, ImageBitmap>>(emptyMap()) }
     val latestSlotUris by rememberUpdatedState(slotUris)
     val latestSlotTransforms by rememberUpdatedState(slotTransforms)
@@ -1672,7 +1676,11 @@ private fun TemplateCropPreview(
                     )
                     val slotImage = images[slot.id]
                     if (slotImage == null) {
-                        drawTemplateSlotHint(slotRect)
+                        drawTemplateSlotHint(
+                            slotRect = slotRect,
+                            label = strings.t("Tocca"),
+                            detail = strings.t("per inserire"),
+                        )
                     } else {
                         drawTemplateSlotImage(
                             image = slotImage,
@@ -1718,7 +1726,7 @@ private fun TemplateCropPreview(
                             },
                             enabled = horizontalScrollState.value > 0,
                         ) {
-                            Text("Indietro")
+                            LocalizedText("Indietro")
                         }
                         OutlinedButton(
                             onClick = {
@@ -1730,7 +1738,7 @@ private fun TemplateCropPreview(
                             },
                             enabled = horizontalScrollState.value < horizontalScrollState.maxValue,
                         ) {
-                            Text("Avanti")
+                            LocalizedText("Avanti")
                         }
                     }
                 }
@@ -1795,9 +1803,11 @@ private fun DrawScope.drawTemplateCutLines(
     }
 }
 
-private fun DrawScope.drawTemplateSlotHint(slotRect: Rect) {
-    val label = "Tocca"
-    val detail = "per inserire"
+private fun DrawScope.drawTemplateSlotHint(
+    slotRect: Rect,
+    label: String,
+    detail: String,
+) {
     val textSize = min(slotRect.width * 0.12f, slotRect.height * 0.18f)
         .coerceIn(9.dp.toPx(), 16.dp.toPx())
     val centerX = slotRect.left + slotRect.width / 2f
@@ -2022,7 +2032,7 @@ private fun EmptyCutterPreview(
         OutlinedButton(onClick = onImport) {
             Icon(Icons.Rounded.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(8.dp))
-            Text(label)
+            LocalizedText(label)
         }
     }
 }
@@ -2038,13 +2048,13 @@ private fun CutButtonContent(
         Icon(Icons.Rounded.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
     }
     Spacer(Modifier.size(8.dp))
-    Text(if (isCutting) "Esporto..." else idleText)
+    LocalizedText(if (isCutting) "Esporto..." else idleText)
 }
 
 @Composable
 private fun ResultList(results: List<CutTileResult>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = "File creati", style = MaterialTheme.typography.titleMedium)
+        LocalizedText(text = "File creati", style = MaterialTheme.typography.titleMedium)
         results.forEach { result ->
             Surface(
                 color = MaterialTheme.colorScheme.surface,
@@ -2058,11 +2068,11 @@ private fun ResultList(results: List<CutTileResult>) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        LocalizedText(
                             text = result.displayName,
                             style = MaterialTheme.typography.bodyLarge,
                         )
-                        Text(
+                        LocalizedText(
                             text = result.layoutLabel,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

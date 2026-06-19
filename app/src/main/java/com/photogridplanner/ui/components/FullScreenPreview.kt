@@ -1,5 +1,8 @@
 package com.photogridplanner.ui.components
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +58,7 @@ fun FullScreenPreview(
 ) {
     if (uris.isEmpty()) return
 
+    val strings = LocalAppStrings.current
     val pagerState = rememberPagerState(pageCount = { uris.size })
 
     Dialog(
@@ -79,7 +83,7 @@ fun FullScreenPreview(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
+                            LocalizedText(
                                 text = "PG",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -88,12 +92,12 @@ fun FullScreenPreview(
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        LocalizedText(
                             text = "photo.grid",
                             style = MaterialTheme.typography.titleSmall,
                             color = Color.White,
                         )
-                        Text(
+                        LocalizedText(
                             text = if (uris.size > 1) {
                                 "Carosello ${pagerState.currentPage + 1}/${uris.size}"
                             } else {
@@ -122,7 +126,7 @@ fun FullScreenPreview(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
-                            contentDescription = "Chiudi",
+                            contentDescription = strings.t("Chiudi"),
                             tint = Color.White,
                         )
                     }
@@ -209,12 +213,12 @@ fun FullScreenPreview(
                             modifier = Modifier.size(27.dp),
                         )
                     }
-                    Text(
+                    LocalizedText(
                         text = "photo.grid  Anteprima post del layout. Qui controlli continuita, tagli e caroselli prima di pubblicare.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
                     )
-                    Text(
+                    LocalizedText(
                         text = "Visualizzazione locale, nessuna connessione a Instagram.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.58f),

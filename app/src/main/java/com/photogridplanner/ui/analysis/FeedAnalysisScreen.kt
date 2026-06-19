@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.analysis
 
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -110,7 +112,7 @@ fun FeedAnalysisScreen(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
+        LocalizedText(
             text = "Analisi Feed",
             style = MaterialTheme.typography.headlineMedium,
         )
@@ -123,7 +125,7 @@ fun FeedAnalysisScreen(
                 FilterChip(
                     selected = selectedCount == count,
                     onClick = { selectedCount = count },
-                    label = { Text("Ultimi $count") },
+                    label = { LocalizedText("Ultimi $count") },
                 )
             }
         }
@@ -180,14 +182,14 @@ private fun ScoreCard(result: FeedAnalysisResult) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
-                Text("Feed Score", style = MaterialTheme.typography.titleMedium)
-                Text(
+                LocalizedText("Feed Score", style = MaterialTheme.typography.titleMedium)
+                LocalizedText(
                     text = "${result.visualUnitCount} unita visive da ${result.selectedCount} post",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (result.mosaicGroupCount > 0) {
-                    Text(
+                    LocalizedText(
                         text = "${result.mosaicGroupCount} mosaici rilevati automaticamente",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
@@ -198,7 +200,7 @@ private fun ScoreCard(result: FeedAnalysisResult) {
                 color = scoreColor(result.score.finalScore).copy(alpha = 0.18f),
                 shape = RoundedCornerShape(999.dp),
             ) {
-                Text(
+                LocalizedText(
                     text = "${result.score.finalScore}/100",
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.headlineSmall,
@@ -223,8 +225,8 @@ private fun ScoreRow(label: String, value: Int) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(
+            LocalizedText(label, style = MaterialTheme.typography.bodyMedium)
+            LocalizedText(
                 text = "$value/100",
                 style = MaterialTheme.typography.bodyMedium,
                 color = scoreColor(value),
@@ -251,9 +253,9 @@ private fun ScoreRow(label: String, value: Int) {
 @Composable
 private fun RecommendationsCard(recommendations: List<FeedRecommendation>) {
     AnalysisPanel {
-        Text("Cosa pubblicare dopo", style = MaterialTheme.typography.titleMedium)
+        LocalizedText("Cosa pubblicare dopo", style = MaterialTheme.typography.titleMedium)
         if (recommendations.isEmpty()) {
-            Text(
+            LocalizedText(
                 text = "Aggiungi almeno un'immagine per ricevere suggerimenti cromatici e di luminosita.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -274,23 +276,23 @@ private fun RecommendationsCard(recommendations: List<FeedRecommendation>) {
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(
+                        LocalizedText(
                             text = recommendation.title,
                             style = if (index == 0) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
                             color = if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         )
-                        Text(
+                        LocalizedText(
                             text = recommendation.message,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Text(
+                        LocalizedText(
                             text = recommendation.brightnessTarget,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                         )
-                        Text(
+                        LocalizedText(
                             text = "Colori compatibili",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -315,11 +317,11 @@ private fun PaletteCard(palette: List<ColorCluster>) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Rounded.Palette, contentDescription = null)
-            Text("Palette colori", style = MaterialTheme.typography.titleMedium)
+            LocalizedText("Palette colori", style = MaterialTheme.typography.titleMedium)
         }
 
         if (palette.isEmpty()) {
-            Text(
+            LocalizedText(
                 text = "Nessun colore dominante disponibile.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -343,8 +345,8 @@ private fun ColorClusterRow(cluster: ColorCluster) {
     ) {
         ColorSwatch(color = cluster.color, modifier = Modifier.size(34.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(hexColor(cluster.color), style = MaterialTheme.typography.bodyMedium)
-            Text(
+            LocalizedText(hexColor(cluster.color), style = MaterialTheme.typography.bodyMedium)
+            LocalizedText(
                 text = "${percentage(cluster.percentage)} del campione",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -370,10 +372,10 @@ private fun ColorClusterRow(cluster: ColorCluster) {
 @Composable
 private fun HeatmapCard(result: FeedAnalysisResult) {
     AnalysisPanel {
-        Text("Heatmap luminosita", style = MaterialTheme.typography.titleMedium)
+        LocalizedText("Heatmap luminosita", style = MaterialTheme.typography.titleMedium)
         HeatmapGrid(values = result.cellBrightnessValues)
 
-        Text(
+        LocalizedText(
             text = "Medie per riga",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
@@ -382,7 +384,7 @@ private fun HeatmapCard(result: FeedAnalysisResult) {
             AverageLine(label = "Riga ${index + 1}", value = value)
         }
 
-        Text(
+        LocalizedText(
             text = "Medie per colonna",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
@@ -396,7 +398,7 @@ private fun HeatmapCard(result: FeedAnalysisResult) {
 @Composable
 private fun HeatmapGrid(values: List<Float?>) {
     if (values.isEmpty()) {
-        Text(
+        LocalizedText(
             text = "Nessun elemento analizzabile.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -422,7 +424,7 @@ private fun HeatmapGrid(values: List<Float?>) {
                             .background(color),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
+                        LocalizedText(
                             text = brightness?.let { "${(it * 100).roundToInt()}%" } ?: "-",
                             color = if (value > 0.58f) Color(0xFF17130C) else Color.White,
                             style = MaterialTheme.typography.titleSmall,
@@ -445,8 +447,8 @@ private fun AverageLine(label: String, value: Float) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(
+        LocalizedText(label, style = MaterialTheme.typography.bodyMedium)
+        LocalizedText(
             text = "${(value * 100).roundToInt()}%",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
@@ -458,7 +460,7 @@ private fun AverageLine(label: String, value: Float) {
 @Composable
 private fun WarningsCard(warnings: List<String>) {
     AnalysisPanel {
-        Text("Avvisi e suggerimenti", style = MaterialTheme.typography.titleMedium)
+        LocalizedText("Avvisi e suggerimenti", style = MaterialTheme.typography.titleMedium)
         warnings.forEach { warning ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -471,7 +473,7 @@ private fun WarningsCard(warnings: List<String>) {
                     tint = if (isPositive) Color(0xFF8BCF9F) else MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(20.dp),
                 )
-                Text(
+                LocalizedText(
                     text = warning,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -489,11 +491,11 @@ private fun ImageMetricsCard(metrics: List<ImageVisualMetrics>) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Rounded.Analytics, contentDescription = null)
-            Text("Metriche per unita visiva", style = MaterialTheme.typography.titleMedium)
+            LocalizedText("Metriche per unita visiva", style = MaterialTheme.typography.titleMedium)
         }
 
         if (metrics.isEmpty()) {
-            Text(
+            LocalizedText(
                 text = "Nessun post analizzabile.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -511,7 +513,7 @@ private fun ImageMetricsCard(metrics: List<ImageVisualMetrics>) {
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        LocalizedText(
                             text = if (metric.tileCount > 1) {
                                 "M${metric.tileCount}"
                             } else {
@@ -522,16 +524,16 @@ private fun ImageMetricsCard(metrics: List<ImageVisualMetrics>) {
                             modifier = Modifier.weight(0.35f),
                         )
                         Column(modifier = Modifier.weight(1.65f)) {
-                            Text(
+                            LocalizedText(
                                 text = metric.visualUnitLabel,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                             )
-                            Text(
+                            LocalizedText(
                                 text = "Luce ${(metric.averageBrightness * 100).roundToInt()}% - Sat ${(metric.averageSaturation * 100).roundToInt()}%",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
-                            Text(
+                            LocalizedText(
                                 text = "Temperatura ${metric.temperature.label}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -564,7 +566,7 @@ private fun LoadingCard() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            Text("Analisi in corso", style = MaterialTheme.typography.titleMedium)
+            LocalizedText("Analisi in corso", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -572,8 +574,8 @@ private fun LoadingCard() {
 @Composable
 private fun MessageCard(title: String, message: String) {
     AnalysisPanel {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text(
+        LocalizedText(title, style = MaterialTheme.typography.titleMedium)
+        LocalizedText(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

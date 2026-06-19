@@ -1,5 +1,8 @@
 package com.photogridplanner.ui.calendar
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,6 +73,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.photogridplanner.data.AppLanguage
 import com.photogridplanner.data.CalendarDayPlan
 import com.photogridplanner.data.GridPost
 import com.photogridplanner.data.PlannerData
@@ -93,6 +97,7 @@ fun CalendarScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val strings = LocalAppStrings.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val today = LocalDate.now()
     var monthKey by rememberSaveable { mutableStateOf(YearMonth.from(today).toString()) }
@@ -102,8 +107,9 @@ fun CalendarScreen(
     val visibleMonth = YearMonth.parse(monthKey)
     val weekAnchor = runCatching { LocalDate.parse(weekAnchorKey) }.getOrDefault(today)
     val weekStart = weekAnchor.minusDays((weekAnchor.dayOfWeek.value - 1).toLong())
-    val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-    val dayFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN)
+    val calendarLocale = if (state.language == AppLanguage.Italian) Locale.ITALIAN else Locale.ENGLISH
+    val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", calendarLocale)
+    val dayFormatter = DateTimeFormatter.ofPattern("d MMM", calendarLocale)
     val selectedPostIds = rememberSaveable { mutableStateOf(emptyList<String>()) }
     val selectedIdSet = selectedPostIds.value.toSet()
     val scheduledCount = state.posts.count { !it.scheduledDate.isNullOrBlank() }
@@ -126,7 +132,7 @@ fun CalendarScreen(
                             exportTitle = "Photo Grid Planner - $label",
                         )
                     }
-                    Toast.makeText(context, "ZIP giornata esportato: $copied immagini", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strings.t("ZIP giornata esportato: $copied immagini"), Toast.LENGTH_SHORT).show()
                 }
             }
         },
@@ -147,7 +153,7 @@ fun CalendarScreen(
                             folderPrefix = "PhotoGridPlanner_${label.replace('/', '-')}",
                         )
                     }
-                    Toast.makeText(context, "Cartella giornata esportata: $copied immagini", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strings.t("Cartella giornata esportata: $copied immagini"), Toast.LENGTH_SHORT).show()
                 }
             }
         },
@@ -252,6 +258,7 @@ fun CalendarScreen(
         val plan = state.calendarPlanFor(date.toString())
         CalendarDayDetailsDialog(
             date = date,
+            locale = calendarLocale,
             posts = postsForDate,
             note = plan?.note.orEmpty(),
             recommendedTime = plan?.recommendedTime.orEmpty().ifBlank { suggestedTimeForDate(date) },
@@ -282,12 +289,12 @@ fun CalendarScreen(
 @Composable
 private fun CalendarHeader() {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
+        LocalizedText(
             text = "Agenda feed",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
-        Text(
+        LocalizedText(
             text = "Organizza i post e apri ogni giorno per anteprima ed export.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -347,7 +354,7 @@ private fun CalendarOverviewCard(
                 ) {
                     Icon(Icons.Rounded.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Svuota")
+                    LocalizedText("Svuota")
                 }
             }
         }
@@ -380,7 +387,7 @@ private fun CalendarStatChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             icon()
-            Text(
+            LocalizedText(
                 text = "$label $value",
                 style = MaterialTheme.typography.labelMedium,
                 color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -416,8 +423,8 @@ private fun PostSelectionStrip(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Post da inserire", style = MaterialTheme.typography.titleMedium)
-                Text(
+                LocalizedText("Post da inserire", style = MaterialTheme.typography.titleMedium)
+                LocalizedText(
                     text = "tap per selezionare",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -427,10 +434,10 @@ private fun PostSelectionStrip(
             FilterChip(
                 selected = showOnlyUnscheduled,
                 onClick = onToggleUnscheduledFilter,
-                label = { Text("Solo non pianificati") },
+                label = { LocalizedText("Solo non pianificati") },
             )
             if (posts.isEmpty()) {
-                Text(
+                LocalizedText(
                     text = if (showOnlyUnscheduled) {
                         "Non ci sono post senza data."
                     } else {
@@ -477,6 +484,7 @@ private fun MonthCalendar(
     onOpenDate: (LocalDate) -> Unit,
     periodTitle: String,
 ) {
+    val strings = LocalAppStrings.current
     val weekLabels = listOf("Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom")
 
     Surface(
@@ -497,21 +505,27 @@ private fun MonthCalendar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onPrevious) {
-                    Icon(Icons.Rounded.ChevronLeft, contentDescription = "Periodo precedente")
+                    Icon(
+                        Icons.Rounded.ChevronLeft,
+                        contentDescription = strings.t("Periodo precedente"),
+                    )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
+                    LocalizedText(
                         text = periodTitle,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                     )
                     TextButton(onClick = onCurrentPeriod) {
-                        Text("Oggi")
+                        LocalizedText("Oggi")
                     }
                 }
                 IconButton(onClick = onNext) {
-                    Icon(Icons.Rounded.ChevronRight, contentDescription = "Periodo successivo")
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = strings.t("Periodo successivo"),
+                    )
                 }
             }
 
@@ -519,18 +533,18 @@ private fun MonthCalendar(
                 FilterChip(
                     selected = mode == "month",
                     onClick = { onModeChange("month") },
-                    label = { Text("Mese") },
+                    label = { LocalizedText("Mese") },
                 )
                 FilterChip(
                     selected = mode == "week",
                     onClick = { onModeChange("week") },
-                    label = { Text("Settimana") },
+                    label = { LocalizedText("Settimana") },
                 )
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 weekLabels.forEach { label ->
-                    Text(
+                    LocalizedText(
                         text = label,
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
@@ -563,7 +577,7 @@ private fun MonthCalendar(
                 }
             }
 
-            Text(
+            LocalizedText(
                 text = if (selectedCount > 0) {
                     "Tocca un giorno per assegnare i post selezionati."
                 } else {
@@ -640,7 +654,7 @@ private fun CalendarDayCell(
                     },
                     shape = CircleShape,
                 ) {
-                    Text(
+                    LocalizedText(
                         text = date.dayOfMonth.toString(),
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         style = MaterialTheme.typography.labelMedium,
@@ -649,7 +663,7 @@ private fun CalendarDayCell(
                     )
                 }
                 if (posts.size > 3) {
-                    Text(
+                    LocalizedText(
                         text = "+${posts.size - 3}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -660,7 +674,7 @@ private fun CalendarDayCell(
                 CalendarMiniThumb(post = post)
             }
             if (!plan?.recommendedTime.isNullOrBlank()) {
-                Text(
+                LocalizedText(
                     text = plan?.recommendedTime.orEmpty(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -698,6 +712,7 @@ private fun CalendarPostDotRow(count: Int) {
 @Composable
 private fun CalendarDayDetailsDialog(
     date: LocalDate,
+    locale: Locale,
     posts: List<GridPost>,
     note: String,
     recommendedTime: String,
@@ -716,9 +731,9 @@ private fun CalendarDayDetailsDialog(
         onDismissRequest = onDismiss,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Giornata")
-                Text(
-                    text = formatFullDate(date),
+                LocalizedText("Giornata")
+                LocalizedText(
+                    text = formatFullDate(date, locale),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -729,7 +744,7 @@ private fun CalendarDayDetailsDialog(
                 modifier = Modifier.heightIn(max = 520.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
+                LocalizedText(
                     text = when (posts.size) {
                         0 -> "Nessun post pianificato per questo giorno."
                         1 -> "1 post pianificato."
@@ -761,7 +776,7 @@ private fun CalendarDayDetailsDialog(
                 }
 
                 if (posts.isNotEmpty()) {
-                    Text(
+                    LocalizedText(
                         text = "L'anteprima usa lo stesso ordine della griglia, cosi i mosaici restano leggibili come nel profilo.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -781,8 +796,8 @@ private fun CalendarDayDetailsDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Piano giornata", style = MaterialTheme.typography.titleSmall)
-                            Text(
+                            LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
+                            LocalizedText(
                                 text = "Suggerito ${suggestedTimeForDate(date)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
@@ -794,19 +809,19 @@ private fun CalendarDayDetailsDialog(
                         ) {
                             Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Orario consigliato: ${editableTime.ifBlank { suggestedTimeForDate(date) }}")
+                            LocalizedText("Orario consigliato: ${editableTime.ifBlank { suggestedTimeForDate(date) }}")
                         }
                         OutlinedTextField(
                             value = editableNote,
                             onValueChange = { editableNote = it.take(240) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
-                            label = { Text("Note") },
+                            label = { LocalizedText("Note") },
                         )
                         OutlinedButton(
                             onClick = { onSavePlan(editableNote, editableTime) },
                         ) {
-                            Text("Salva piano")
+                            LocalizedText("Salva piano")
                         }
                     }
                 }
@@ -823,7 +838,7 @@ private fun CalendarDayDetailsDialog(
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("ZIP")
+                    LocalizedText("ZIP")
                 }
                 OutlinedButton(
                     enabled = hasMedia,
@@ -831,10 +846,10 @@ private fun CalendarDayDetailsDialog(
                 ) {
                     Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Cartella")
+                    LocalizedText("Cartella")
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Chiudi")
+                    LocalizedText("Chiudi")
                 }
             }
         },
@@ -868,7 +883,7 @@ private fun ClockTimePickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scegli orario") },
+        title = { LocalizedText("Scegli orario") },
         text = {
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -883,12 +898,12 @@ private fun ClockTimePickerDialog(
                     onConfirm(formatTime(timePickerState.hour, timePickerState.minute))
                 },
             ) {
-                Text("Conferma")
+                LocalizedText("Conferma")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                LocalizedText("Annulla")
             }
         },
     )
@@ -919,6 +934,7 @@ private fun CalendarPostThumb(
     onClick: () -> Unit,
     onClearSchedule: (() -> Unit)? = null,
 ) {
+    val strings = LocalAppStrings.current
     Surface(
         modifier = Modifier
             .width(70.dp)
@@ -940,7 +956,7 @@ private fun CalendarPostThumb(
                 color = Color.Black.copy(alpha = 0.56f),
                 shape = CircleShape,
             ) {
-                Text(
+                LocalizedText(
                     text = index.toString(),
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                     color = Color.White,
@@ -955,7 +971,7 @@ private fun CalendarPostThumb(
                     color = Color.Black.copy(alpha = 0.62f),
                     shape = RoundedCornerShape(6.dp),
                 ) {
-                    Text(
+                    LocalizedText(
                         text = formatShortDate(post.scheduledDate),
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp),
                         color = Color.White,
@@ -976,7 +992,7 @@ private fun CalendarPostThumb(
                 ) {
                     Icon(
                         Icons.Rounded.Clear,
-                        contentDescription = "Rimuovi data",
+                        contentDescription = strings.t("Rimuovi data"),
                         tint = MaterialTheme.colorScheme.onError,
                         modifier = Modifier
                             .padding(3.dp)
@@ -1005,7 +1021,7 @@ private fun CalendarMiniThumb(post: GridPost) {
                     .height(17.dp),
             )
             Spacer(Modifier.width(3.dp))
-            Text(
+            LocalizedText(
                 text = if (post.isCarousel) "${post.allMediaUris.size}" else "",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1028,7 +1044,7 @@ private fun PostThumbContent(
                     .background(Color(post.placeholderColor)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                LocalizedText(
                     text = post.placeholderDisplayLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
@@ -1090,8 +1106,8 @@ private fun formatShortDate(raw: String): String {
     }.getOrDefault(raw)
 }
 
-private fun formatFullDate(date: LocalDate): String {
-    val formatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.ITALIAN)
+private fun formatFullDate(date: LocalDate, locale: Locale): String {
+    val formatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", locale)
     return date.format(formatter).replaceFirstChar { it.uppercase() }
 }
 

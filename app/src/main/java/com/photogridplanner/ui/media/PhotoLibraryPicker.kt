@@ -1,5 +1,7 @@
 package com.photogridplanner.ui.media
 
+import com.photogridplanner.ui.i18n.LocalizedText
+
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
@@ -144,7 +146,7 @@ fun PhotoLibraryPicker(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(Icons.Rounded.PhotoLibrary, contentDescription = null)
-                Text(title)
+                LocalizedText(title)
             }
         },
         text = {
@@ -210,13 +212,13 @@ fun PhotoLibraryPicker(
                         onDismiss()
                     },
                 ) {
-                    Text("Importa ${selected.size}")
+                    LocalizedText("Importa ${selected.size}")
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Chiudi")
+                LocalizedText("Chiudi")
             }
         },
     )
@@ -251,11 +253,11 @@ private fun PhotoLibraryContent(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
+                    LocalizedText(
                         text = "Accesso parziale",
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    Text(
+                    LocalizedText(
                         text = "Stai vedendo solo le immagini che hai autorizzato. Puoi modificarle quando vuoi.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -263,14 +265,14 @@ private fun PhotoLibraryContent(
                     OutlinedButton(onClick = onManageAccess) {
                         Icon(Icons.Rounded.Collections, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
-                        Text("Gestisci foto consentite")
+                        LocalizedText("Gestisci foto consentite")
                     }
                 }
             }
         }
 
         if (mode == PhotoSelectionMode.Multiple) {
-            Text(
+            LocalizedText(
                 text = "Selezionate ${selected.size}/$maxSelection",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -365,12 +367,12 @@ private fun EmptyPhotoLibrary() {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.size(12.dp))
-        Text(
+        LocalizedText(
             text = "Nessuna immagine disponibile",
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
-        Text(
+        LocalizedText(
             text = "Se hai concesso accesso parziale, usa Gestisci foto consentite per aggiungere altre immagini.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -400,14 +402,14 @@ private fun PhotoPermissionDeniedContent(
             tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(Modifier.size(14.dp))
-        Text(
+        LocalizedText(
             text = if (permissionAsked) "Accesso alla libreria negato" else "Accesso alla libreria richiesto",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.size(8.dp))
-        Text(
+        LocalizedText(
             text = "La libreria fotografica serve per visualizzare, selezionare, organizzare, tagliare e pianificare le immagini nella griglia. Le foto restano sul dispositivo e vengono elaborate localmente.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -416,10 +418,10 @@ private fun PhotoPermissionDeniedContent(
         Spacer(Modifier.size(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onRetry) {
-                Text("Consenti accesso")
+                LocalizedText("Consenti accesso")
             }
             OutlinedButton(onClick = onOpenSettings) {
-                Text("Impostazioni")
+                LocalizedText("Impostazioni")
             }
         }
     }
