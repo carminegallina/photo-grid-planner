@@ -736,12 +736,17 @@ private fun CalendarDayDetailsDialog(
         mutableStateOf(recommendedTime.ifBlank { suggestedTime })
     }
     var showTimePicker by rememberSaveable(date.toString()) { mutableStateOf(false) }
+    val gridPreviewHeight = when {
+        posts.size <= 3 -> 132.dp
+        posts.size <= 6 -> 228.dp
+        else -> 300.dp
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                LocalizedText("Giornata")
+                LocalizedText("Giornata", style = MaterialTheme.typography.titleLarge)
                 LocalizedText(
                     text = formatFullDate(date, locale),
                     style = MaterialTheme.typography.bodyMedium,
@@ -751,7 +756,9 @@ private fun CalendarDayDetailsDialog(
         },
         text = {
             Column(
-                modifier = Modifier.heightIn(max = 520.dp),
+                modifier = Modifier
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 LocalizedText(
@@ -764,12 +771,22 @@ private fun CalendarDayDetailsDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
+                DayPublicationPlan(
+                    selectedTime = selectedTime,
+                    suggestedTime = suggestedTime,
+                    onChooseCustomTime = { showTimePicker = true },
+                    onUseSuggestedTime = {
+                        selectedTime = suggestedTime
+                        onSavePlan(note, suggestedTime)
+                    },
+                )
+
                 if (posts.isNotEmpty()) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 420.dp),
+                            .height(gridPreviewHeight),
                         horizontalArrangement = Arrangement.spacedBy(1.dp),
                         verticalArrangement = Arrangement.spacedBy(1.dp),
                     ) {
@@ -793,57 +810,6 @@ private fun CalendarDayDetailsDialog(
                     )
                 }
 
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(10.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
-                        LocalizedText(
-                            text = "Ora impostata: $selectedTime",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            OutlinedButton(
-                                onClick = { showTimePicker = true },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                LocalizedText(
-                                    "Imposta ora",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    maxLines = 1,
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    selectedTime = suggestedTime
-                                    onSavePlan(note, suggestedTime)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(12.dp),
-                            ) {
-                                LocalizedText(
-                                    "Suggerito $suggestedTime",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
@@ -901,6 +867,100 @@ private fun CalendarDayDetailsDialog(
                 showTimePicker = false
             },
         )
+    }
+}
+
+@Composable
+private fun DayPublicationPlan(
+    selectedTime: String,
+    suggestedTime: String,
+    onChooseCustomTime: () -> Unit,
+    onUseSuggestedTime: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    shape = CircleShape,
+                ) {
+                    Icon(
+                        Icons.Rounded.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp).size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
+                    LocalizedText(
+                        "Ora attuale",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                LocalizedText(
+                    selectedTime,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onChooseCustomTime,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(68.dp),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        LocalizedText(
+                            "Personalizzato",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        LocalizedText(
+                            selectedTime,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Button(
+                    onClick = onUseSuggestedTime,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(68.dp),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        LocalizedText(
+                            "Suggerito",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        LocalizedText(
+                            suggestedTime,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
