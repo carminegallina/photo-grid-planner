@@ -178,6 +178,7 @@ fun GridScreen(
         mode = PhotoSelectionMode.Multiple,
         maxSelection = 80,
         title = "Importa nella griglia",
+        usedMediaUris = state.posts.flatMap { post -> post.allMediaUris }.toSet(),
         onDismiss = { showPhotoLibrary = false },
         onPhotosSelected = { uris ->
             when (uris.size) {

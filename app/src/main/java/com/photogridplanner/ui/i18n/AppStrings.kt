@@ -365,6 +365,19 @@ private val EnglishStrings = mapOf(
 
     "Libreria foto" to "Photo library",
     "Notifiche" to "Notifications",
+    "Backup progetto" to "Project backup",
+    "Salva griglia, layout, calendario e impostazioni in un file locale. Le foto non vengono duplicate e restano sul dispositivo." to
+        "Save the grid, layouts, calendar and settings to a local file. Photos are not duplicated and stay on your device.",
+    "Crea backup" to "Create backup",
+    "Ripristina backup" to "Restore backup",
+    "Backup progetto creato" to "Project backup created",
+    "Creazione backup non riuscita" to "Could not create the backup",
+    "File di backup non valido" to "Invalid backup file",
+    "Ripristinare il progetto?" to "Restore this project?",
+    "La griglia, i layout e il calendario attuali verranno sostituiti dal contenuto del backup." to
+        "The current grid, layouts and calendar will be replaced with the backup contents.",
+    "Backup ripristinato" to "Backup restored",
+    "Ripristino backup non riuscito" to "Could not restore the backup",
     "Promemoria pubblicazione" to "Publishing reminders",
     "Ricevi un avviso all'orario scelto nel calendario quando ci sono post pianificati per la giornata." to
         "Receive a reminder at the time selected in the calendar when posts are planned for the day.",

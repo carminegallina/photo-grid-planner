@@ -16,6 +16,7 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
@@ -329,6 +330,23 @@ class PlannerRepository(context: Context) {
         }
     }
 
+    suspend fun exportBackupJson(): String {
+        val snapshot = data.first()
+        return JSONObject()
+            .put("format", BackupFormat)
+            .put("version", BackupVersion)
+            .put("planner", snapshot.toBackupJson())
+            .toString(2)
+    }
+
+    suspend fun restoreBackupJson(raw: String) {
+        val root = JSONObject(raw)
+        require(root.optString("format") == BackupFormat) { "File di backup non riconosciuto." }
+        require(root.optInt("version", 0) <= BackupVersion) { "Il backup richiede una versione piu recente dell'app." }
+        val restored = root.getJSONObject("planner").toPlannerDataFromBackup()
+        updateData { restored }
+    }
+
     private suspend fun updateData(transform: (PlannerData) -> PlannerData) {
         dataStore.edit { preferences ->
             val next = transform(preferences.toPlannerData())
@@ -362,6 +380,37 @@ class PlannerRepository(context: Context) {
                     .ifBlank { this[Keys.LegacySavedProfileLayoutsJson].orEmpty() },
             ),
             calendarPlans = decodeCalendarPlans(this[Keys.CalendarPlansJson].orEmpty()),
+        )
+    }
+
+    private fun PlannerData.toBackupJson(): JSONObject {
+        return JSONObject()
+            .put("posts", JSONArray(encodePosts(posts)))
+            .put("previewMode", previewMode.name)
+            .put("showHiddenPosts", showHiddenPosts)
+            .put("showTutorialOnLaunch", showTutorialOnLaunch)
+            .put("notificationsEnabled", notificationsEnabled)
+            .put("language", language.name)
+            .put("savedLayouts", JSONArray(encodeSavedLayouts(savedLayouts)))
+            .put("calendarPlans", JSONArray(encodeCalendarPlans(calendarPlans)))
+    }
+
+    private fun JSONObject.toPlannerDataFromBackup(): PlannerData {
+        val previewMode = runCatching {
+            PreviewMode.valueOf(optString("previewMode", PreviewMode.Vertical.name))
+        }.getOrDefault(PreviewMode.Vertical)
+        val language = runCatching {
+            AppLanguage.valueOf(optString("language", defaultAppLanguageForDevice().name))
+        }.getOrDefault(defaultAppLanguageForDevice())
+        return PlannerData(
+            posts = decodePosts(optJSONArray("posts")?.toString().orEmpty()),
+            previewMode = previewMode,
+            showHiddenPosts = optBoolean("showHiddenPosts", true),
+            showTutorialOnLaunch = optBoolean("showTutorialOnLaunch", true),
+            notificationsEnabled = optBoolean("notificationsEnabled", false),
+            language = language,
+            savedLayouts = decodeSavedLayouts(optJSONArray("savedLayouts")?.toString().orEmpty()),
+            calendarPlans = decodeCalendarPlans(optJSONArray("calendarPlans")?.toString().orEmpty()),
         )
     }
 
@@ -506,5 +555,10 @@ class PlannerRepository(context: Context) {
         val SavedLayoutsJson = stringPreferencesKey("saved_layouts_json")
         val LegacySavedProfileLayoutsJson = stringPreferencesKey("saved_profile_layouts_json")
         val CalendarPlansJson = stringPreferencesKey("calendar_plans_json")
+    }
+
+    private companion object {
+        const val BackupFormat = "photo_grid_planner_backup"
+        const val BackupVersion = 1
     }
 }

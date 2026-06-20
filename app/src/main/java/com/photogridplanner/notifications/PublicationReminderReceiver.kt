@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.photogridplanner.MainActivity
@@ -44,14 +45,25 @@ class PublicationReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val notification = Notification.Builder(context, ChannelId)
+        val builder = Notification.Builder(context, ChannelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(body)
-            .setStyle(Notification.BigTextStyle().bigText(body))
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
-            .build()
+        val preview = intent.getStringExtra(ExtraPreviewPath)
+            ?.takeIf { it.isNotBlank() }
+            ?.let(BitmapFactory::decodeFile)
+        if (preview != null) {
+            builder.setStyle(
+                Notification.BigPictureStyle()
+                    .bigPicture(preview)
+                    .setSummaryText(body),
+            )
+        } else {
+            builder.setStyle(Notification.BigTextStyle().bigText(body))
+        }
+        val notification = builder.build()
         manager.notify(intent.getStringExtra(ExtraDate).orEmpty().hashCode(), notification)
     }
 
@@ -77,6 +89,7 @@ class PublicationReminderReceiver : BroadcastReceiver() {
         const val ExtraPostCount = "post_count"
         const val ExtraTime = "time"
         const val ExtraLanguage = "language"
+        const val ExtraPreviewPath = "preview_path"
         private const val ChannelId = "publication_reminders"
     }
 }

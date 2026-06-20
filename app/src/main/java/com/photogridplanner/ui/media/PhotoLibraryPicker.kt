@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -118,6 +119,7 @@ fun PhotoLibraryPicker(
     mode: PhotoSelectionMode,
     maxSelection: Int = 80,
     title: String = "Libreria foto",
+    usedMediaUris: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onPhotosSelected: (List<Uri>) -> Unit,
 ) {
@@ -192,6 +194,7 @@ fun PhotoLibraryPicker(
                         partialAccess = accessState.isPartial,
                         mode = mode,
                         maxSelection = maxSelection,
+                        usedMediaUris = usedMediaUris,
                         onManageAccess = {
                             selected = emptyList()
                             requestPhotoAccess()
@@ -263,6 +266,7 @@ private fun PhotoLibraryContent(
     partialAccess: Boolean,
     mode: PhotoSelectionMode,
     maxSelection: Int,
+    usedMediaUris: Set<String>,
     onManageAccess: () -> Unit,
     onTogglePhoto: (Uri) -> Unit,
     onAddToSelection: (List<Uri>) -> Unit,
@@ -419,7 +423,8 @@ private fun PhotoLibraryContent(
                                 photo = photo,
                                 index = index,
                                 photoCount = visiblePhotos.size,
-                                selected = isSelected,
+                            selected = isSelected,
+                            alreadyInGrid = photo.uri.toString() in usedMediaUris,
                                 dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
                                 cellStridePx = cellStridePx,
                                 onCellSizeChanged = { size -> cellSizePx = size },
@@ -445,6 +450,7 @@ private fun PhotoCell(
     index: Int,
     photoCount: Int,
     selected: Boolean,
+    alreadyInGrid: Boolean,
     dragSelectionEnabled: Boolean,
     cellStridePx: Float,
     onCellSizeChanged: (Int) -> Unit,
@@ -498,6 +504,23 @@ private fun PhotoCell(
             maxSize = 480,
             modifier = Modifier.fillMaxSize(),
         )
+        if (alreadyInGrid) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+                    .size(24.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ViewModule,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(5.dp),
+                )
+            }
+        }
         if (selected) {
             Surface(
                 modifier = Modifier

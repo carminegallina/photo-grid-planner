@@ -151,6 +151,12 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    suspend fun exportBackupJson(): String = repository.exportBackupJson()
+
+    suspend fun restoreBackupJson(raw: String) {
+        repository.restoreBackupJson(raw)
+    }
+
     fun exportOrderText(posts: List<GridPost> = state.value.posts): String {
         val english = state.value.language == AppLanguage.English
         if (posts.isEmpty()) {
