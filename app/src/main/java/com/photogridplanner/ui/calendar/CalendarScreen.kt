@@ -748,6 +748,8 @@ private fun CalendarDayDetailsDialog(
         onDismiss()
     }
 
+    val suggestedTime = suggestedTimeForDate(date)
+
     AlertDialog(
         onDismissRequest = ::dismissAndSavePlan,
         title = {
@@ -819,44 +821,38 @@ private fun CalendarDayDetailsDialog(
                         ) {
                             LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
                         }
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showTimePicker = true },
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        OutlinedButton(
+                            onClick = { showTimePicker = true },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
-                            ),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Schedule,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    LocalizedText(
-                                        "Orario di pubblicazione",
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
-                                    LocalizedText(
-                                        editableTime.ifBlank { suggestedTimeForDate(date) },
-                                        style = MaterialTheme.typography.headlineSmall,
-                                    )
-                                }
-                                Icon(
-                                    Icons.Rounded.ChevronRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
+                            Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            LocalizedText("Cambia orario", style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.width(8.dp))
+                            LocalizedText(
+                                editableTime.ifBlank { suggestedTime },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                editableTime = suggestedTime
+                                hasUnsavedPlanChanges = false
+                                onSavePlan(editableNote, suggestedTime)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            LocalizedText("Usa orario consigliato", style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.width(8.dp))
+                            LocalizedText(
+                                suggestedTime,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                         if (showNoteEditor) {
                             OutlinedTextField(
@@ -928,12 +924,13 @@ private fun CalendarDayDetailsDialog(
 
     if (showTimePicker) {
         ClockTimePickerDialog(
-            initialTime = editableTime.ifBlank { suggestedTimeForDate(date) },
+            initialTime = editableTime.ifBlank { suggestedTime },
             onDismiss = { showTimePicker = false },
             onConfirm = { time ->
                 if (editableTime != time) {
                     editableTime = time
-                    hasUnsavedPlanChanges = true
+                    hasUnsavedPlanChanges = false
+                    onSavePlan(editableNote, time)
                 }
                 showTimePicker = false
             },

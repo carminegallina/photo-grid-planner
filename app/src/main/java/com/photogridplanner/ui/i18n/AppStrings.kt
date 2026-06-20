@@ -379,6 +379,9 @@ private val EnglishStrings = mapOf(
     "Backup ripristinato" to "Backup restored",
     "Ripristino backup non riuscito" to "Could not restore the backup",
     "Promemoria pubblicazione" to "Publishing reminders",
+    "Consenti gli allarmi esatti per ricevere il promemoria anche con l'app chiusa." to
+        "Allow exact alarms to receive reminders even when the app is closed.",
+    "Consenti promemoria puntuali" to "Allow precise reminders",
     "Ricevi un avviso all'orario scelto nel calendario quando ci sono post pianificati per la giornata." to
         "Receive a reminder at the time selected in the calendar when posts are planned for the day.",
     "Permesso notifiche non concesso" to "Notification permission not granted",
@@ -458,6 +461,10 @@ private val EnglishStrings = mapOf(
     "Giornata" to "Day",
     "Piano giornata" to "Day plan",
     "Orario di pubblicazione" to "Publishing time",
+    "Orario consigliato" to "Suggested time",
+    "Cambia orario" to "Change time",
+    "Usa orario consigliato" to "Use suggested time",
+    "Applica" to "Apply",
     "Cambia" to "Change",
     "Aggiungi nota" to "Add note",
     "Note" to "Notes",

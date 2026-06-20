@@ -4,8 +4,12 @@ import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.LocalizedText
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +77,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val strings = LocalAppStrings.current
     val scope = rememberCoroutineScope()
+    val needsExactAlarmAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == false
     var pendingBackupRestore by remember { mutableStateOf<String?>(null) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -219,6 +225,9 @@ fun SettingsScreen(
                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         } else {
                             viewModel.setNotificationsEnabled(enabled)
+                            if (enabled && needsExactAlarmAccess) {
+                                openExactAlarmSettings(context)
+                            }
                         }
                     },
                 )
@@ -228,6 +237,18 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (state.notificationsEnabled && needsExactAlarmAccess) {
+                LocalizedText(
+                    text = "Consenti gli allarmi esatti per ricevere il promemoria anche con l'app chiusa.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = { openExactAlarmSettings(context) }) {
+                    Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    LocalizedText("Consenti promemoria puntuali")
+                }
+            }
         }
 
         SettingsPanel(title = "Tutorial") {
@@ -409,6 +430,16 @@ fun SettingsScreen(
             },
         )
     }
+}
+
+private fun openExactAlarmSettings(context: android.content.Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    context.startActivity(
+        Intent(
+            Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+            Uri.parse("package:${context.packageName}"),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
 }
 
 @Composable

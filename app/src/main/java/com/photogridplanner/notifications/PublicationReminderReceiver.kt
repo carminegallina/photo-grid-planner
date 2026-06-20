@@ -55,10 +55,15 @@ class PublicationReminderReceiver : BroadcastReceiver() {
             ?.takeIf { it.isNotBlank() }
             ?.let(BitmapFactory::decodeFile)
         if (preview != null) {
-            // A compact thumbnail preserves the entire planned grid instead of cropping tall mosaics.
-            builder.setLargeIcon(preview)
+            // The renderer adds padding around the square grid, so BigPicture can show the full mosaic.
+            builder.setStyle(
+                Notification.BigPictureStyle()
+                    .bigPicture(preview)
+                    .bigLargeIcon(null as android.graphics.Bitmap?),
+            )
+        } else {
+            builder.setStyle(Notification.BigTextStyle().bigText(body))
         }
-        builder.setStyle(Notification.BigTextStyle().bigText(body))
         val notification = builder.build()
         manager.notify(intent.getStringExtra(ExtraDate).orEmpty().hashCode(), notification)
     }
