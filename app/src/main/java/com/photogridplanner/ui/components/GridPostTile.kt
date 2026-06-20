@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
@@ -39,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.photogridplanner.data.GridPost
-import com.photogridplanner.data.PlaceholderPresetColors
 import com.photogridplanner.data.PostKind
 
 @Composable
@@ -51,13 +49,17 @@ fun GridPostTile(
     onDismissMenu: () -> Unit,
     onToggleVisibility: () -> Unit,
     onDelete: () -> Unit,
-    onPlaceholderColorChange: (Int) -> Unit = {},
-    onEditPlaceholder: () -> Unit = {},
+    onPlaceholderClick: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
             .background(Color.Black)
-            .clickable(enabled = post.kind == PostKind.Image && post.coverUri != null, onClick = onOpen),
+            .clickable(
+                enabled = post.kind == PostKind.Placeholder || post.coverUri != null,
+                onClick = {
+                    if (post.kind == PostKind.Placeholder) onPlaceholderClick() else onOpen()
+                },
+            ),
     ) {
         when (post.kind) {
             PostKind.Image -> AsyncUriImage(
@@ -149,57 +151,12 @@ fun GridPostTile(
             }
         }
 
-        DropdownMenu(
-            expanded = menuExpanded,
-            onDismissRequest = onDismissMenu,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            if (post.kind == PostKind.Placeholder) {
-                DropdownMenuItem(
-                    text = { LocalizedText("Modifica placeholder") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Edit,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        onDismissMenu()
-                        onEditPlaceholder()
-                    },
-                )
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            LocalizedText("Colore placeholder")
-                            Row(
-                                modifier = Modifier.padding(top = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                PlaceholderPresetColors.forEach { color ->
-                                    Surface(
-                                        modifier = Modifier
-                                            .padding(end = 8.dp)
-                                            .size(28.dp)
-                                            .clickable {
-                                                onDismissMenu()
-                                                onPlaceholderColorChange(color)
-                                            },
-                                        shape = CircleShape,
-                                        color = Color(color),
-                                        border = androidx.compose.foundation.BorderStroke(
-                                            width = 1.dp,
-                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-                                        ),
-                                        content = {},
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    onClick = {},
-                )
-            }
+        if (post.kind == PostKind.Image) {
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = onDismissMenu,
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
             DropdownMenuItem(
                 text = { LocalizedText(if (post.hidden) "Mostra nella preview" else "Oscura dalla preview") },
                 leadingIcon = {
@@ -227,6 +184,7 @@ fun GridPostTile(
                     onDelete()
                 },
             )
+            }
         }
     }
 }

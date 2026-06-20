@@ -50,6 +50,22 @@ class PlannerRepository(context: Context) {
         }
     }
 
+    suspend fun insertImage(uri: String, position: Int) {
+        updateData { current ->
+            val index = position.coerceIn(0, current.posts.size)
+            val newPost = GridPost(
+                id = UUID.randomUUID().toString(),
+                kind = PostKind.Image,
+                uri = uri,
+            )
+            current.copy(
+                posts = current.posts.toMutableList().apply {
+                    add(index, newPost)
+                },
+            )
+        }
+    }
+
     suspend fun addCarousel(uris: List<String>) {
         if (uris.isEmpty()) return
         updateData { current ->
@@ -123,6 +139,54 @@ class PlannerRepository(context: Context) {
         }
     }
 
+    suspend fun replacePlaceholderWithImage(id: String, uri: String) {
+        updateData { current ->
+            current.copy(
+                posts = current.posts.map { post ->
+                    if (post.id == id && post.kind == PostKind.Placeholder) {
+                        post.copy(
+                            kind = PostKind.Image,
+                            uri = uri,
+                            mediaUris = emptyList(),
+                            status = when {
+                                post.scheduledDate != null -> PostStatus.Scheduled
+                                post.status == PostStatus.Published -> PostStatus.Idea
+                                else -> post.status
+                            },
+                        )
+                    } else {
+                        post
+                    }
+                },
+            )
+        }
+    }
+
+    suspend fun setPostDetails(
+        id: String,
+        caption: String,
+        hashtags: String,
+        notes: String,
+        status: PostStatus,
+    ) {
+        updateData { current ->
+            current.copy(
+                posts = current.posts.map { post ->
+                    if (post.id == id) {
+                        post.copy(
+                            caption = caption.trim().take(2_200),
+                            hashtags = hashtags.trim().take(1_200),
+                            notes = notes.trim().take(2_000),
+                            status = status,
+                        )
+                    } else {
+                        post
+                    }
+                },
+            )
+        }
+    }
+
     suspend fun deletePost(id: String) {
         updateData { current ->
             current.copy(posts = current.posts.filterNot { it.id == id })
@@ -181,7 +245,7 @@ class PlannerRepository(context: Context) {
         updateData { current ->
             current.copy(
                 posts = current.posts.map { post ->
-                    if (post.id == id) post.copy(scheduledDate = date) else post
+                    if (post.id == id) post.withSchedule(date) else post
                 },
             )
         }
@@ -193,7 +257,7 @@ class PlannerRepository(context: Context) {
         updateData { current ->
             current.copy(
                 posts = current.posts.map { post ->
-                    if (post.id in idSet) post.copy(scheduledDate = date) else post
+                    if (post.id in idSet) post.withSchedule(date) else post
                 },
             )
         }
@@ -205,7 +269,7 @@ class PlannerRepository(context: Context) {
             current.copy(
                 posts = current.posts.map { post ->
                     if (post.kind == PostKind.Image || post.kind == PostKind.Placeholder) {
-                        val scheduled = post.copy(scheduledDate = cursor.toString())
+                        val scheduled = post.withSchedule(cursor.toString())
                         cursor = cursor.plusDays(spacingDays.toLong().coerceAtLeast(1L))
                         scheduled
                     } else {
@@ -218,7 +282,7 @@ class PlannerRepository(context: Context) {
 
     suspend fun clearSchedule() {
         updateData { current ->
-            current.copy(posts = current.posts.map { it.copy(scheduledDate = null) })
+            current.copy(posts = current.posts.map { it.withSchedule(null) })
         }
     }
 
@@ -428,6 +492,14 @@ class PlannerRepository(context: Context) {
             buildList {
                 for (index in 0 until json.length()) {
                     val item = json.getJSONObject(index)
+                    val scheduledDate = item.optString("scheduledDate").takeIf { it.isNotBlank() }
+                    val status = if (!item.has("status") && scheduledDate != null) {
+                        PostStatus.Scheduled
+                    } else {
+                        runCatching {
+                            PostStatus.valueOf(item.optString("status", PostStatus.Idea.name))
+                        }.getOrDefault(PostStatus.Idea)
+                    }
                     add(
                         GridPost(
                             id = item.getString("id"),
@@ -440,7 +512,11 @@ class PlannerRepository(context: Context) {
                                 PlaceholderType.valueOf(item.optString("placeholderType", PlaceholderType.Shot.name))
                             }.getOrDefault(PlaceholderType.Shot),
                             hidden = item.optBoolean("hidden", false),
-                            scheduledDate = item.optString("scheduledDate").takeIf { it.isNotBlank() },
+                            scheduledDate = scheduledDate,
+                            caption = item.optString("caption"),
+                            hashtags = item.optString("hashtags"),
+                            notes = item.optString("notes"),
+                            status = status,
                             createdAt = item.optLong("createdAt", System.currentTimeMillis()),
                         ),
                     )
@@ -463,6 +539,10 @@ class PlannerRepository(context: Context) {
                     .put("placeholderType", post.placeholderType.name)
                     .put("hidden", post.hidden)
                     .put("scheduledDate", post.scheduledDate.orEmpty())
+                    .put("caption", post.caption)
+                    .put("hashtags", post.hashtags)
+                    .put("notes", post.notes)
+                    .put("status", post.status.name)
                     .put("createdAt", post.createdAt),
             )
         }
@@ -550,6 +630,15 @@ class PlannerRepository(context: Context) {
                 }
             }
         }.getOrElse { emptyList() }
+    }
+
+    private fun GridPost.withSchedule(date: String?): GridPost {
+        val nextStatus = when {
+            date != null && status != PostStatus.Published -> PostStatus.Scheduled
+            date == null && status == PostStatus.Scheduled -> PostStatus.Ready
+            else -> status
+        }
+        return copy(scheduledDate = date, status = nextStatus)
     }
 
     private object Keys {

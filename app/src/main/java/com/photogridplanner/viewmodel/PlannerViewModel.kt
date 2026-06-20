@@ -12,6 +12,7 @@ import com.photogridplanner.data.PlannerData
 import com.photogridplanner.data.PlannerRepository
 import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PostKind
+import com.photogridplanner.data.PostStatus
 import com.photogridplanner.data.PreviewMode
 import com.photogridplanner.notifications.PublicationReminderScheduler
 import java.time.LocalDate
@@ -44,6 +45,13 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun insertImage(uri: Uri, position: Int) {
+        persistReadAccess(listOf(uri))
+        viewModelScope.launch {
+            repository.insertImage(uri.toString(), position)
+        }
+    }
+
     fun addCarousel(uris: List<Uri>) {
         persistReadAccess(uris)
         viewModelScope.launch {
@@ -61,6 +69,23 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun setPlaceholderDetails(id: String, color: Int, label: String, type: PlaceholderType) {
         viewModelScope.launch { repository.setPlaceholderDetails(id, color, label, type) }
+    }
+
+    fun replacePlaceholderWithImage(id: String, uri: Uri) {
+        persistReadAccess(listOf(uri))
+        viewModelScope.launch { repository.replacePlaceholderWithImage(id, uri.toString()) }
+    }
+
+    fun setPostDetails(
+        id: String,
+        caption: String,
+        hashtags: String,
+        notes: String,
+        status: PostStatus,
+    ) {
+        viewModelScope.launch {
+            repository.setPostDetails(id, caption, hashtags, notes, status)
+        }
     }
 
     fun deletePost(id: String) {

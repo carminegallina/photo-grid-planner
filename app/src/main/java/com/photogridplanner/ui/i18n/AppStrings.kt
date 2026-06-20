@@ -47,6 +47,15 @@ class AppStrings(private val language: AppLanguage) {
         Regex("""^Post (\d+)$""").matchEntire(raw)?.let {
             return "Post ${it.groupValues[1]}"
         }
+        Regex("""^Pianificato per (.+)$""").matchEntire(raw)?.let {
+            return "Scheduled for ${it.groupValues[1]}"
+        }
+        Regex("""^Attuale (\d+/100)$""").matchEntire(raw)?.let {
+            return "Current ${it.groupValues[1]}"
+        }
+        Regex("""^Riga (\d+), colonna (\d+)$""").matchEntire(raw)?.let {
+            return "Row ${it.groupValues[1]}, column ${it.groupValues[2]}"
+        }
         Regex("""^Placeholder (\d+)$""").matchEntire(raw)?.let {
             return "Placeholder ${it.groupValues[1]}"
         }
@@ -579,6 +588,30 @@ private val EnglishStrings = mapOf(
         "photo.grid  Layout post preview. Check continuity, cuts and carousels before publishing.",
     "Visualizzazione locale, nessuna connessione a Instagram." to
         "Local preview, no connection to Instagram.",
+    "Didascalia" to "Caption",
+    "Hashtag" to "Hashtags",
+    "Copia didascalia" to "Copy caption",
+    "Copia hashtag" to "Copy hashtags",
+    "Testo copiato" to "Text copied",
+    "Hashtag copiati" to "Hashtags copied",
+    "Stato" to "Status",
+    "Idea" to "Idea",
+    "Pronto" to "Ready",
+    "Programmato" to "Scheduled",
+    "Pubblicato" to "Published",
+    "Post singolo" to "Single post",
+    "Anteprima" to "Preview",
+    "Gestisci questo spazio nella griglia." to "Manage this space in the grid.",
+    "Modifica" to "Edit",
+    "Sostituisci" to "Replace",
+    "Sostituisci placeholder" to "Replace placeholder",
+    "Anteprima prima di aggiungere" to "Preview before adding",
+    "Posizione" to "Position",
+    "Posizione precedente" to "Previous position",
+    "Posizione successiva" to "Next position",
+    "Aggiungi alla griglia" to "Add to grid",
+    "Feed Score previsto" to "Projected Feed Score",
+    "Palette prevista" to "Projected palette",
 )
 
 @Composable

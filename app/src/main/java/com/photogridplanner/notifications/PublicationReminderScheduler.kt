@@ -54,6 +54,11 @@ object PublicationReminderScheduler {
                 .render(context = context, posts = data.posts, date = dateKey)
                 ?.absolutePath
                 .orEmpty()
+            val publishingText = scheduledPosts
+                .map { it.publishingText }
+                .filter { it.isNotBlank() }
+                .joinToString(separator = "\n\n---\n\n")
+                .take(MaxNotificationCopyLength)
             val pendingIntent = reminderIntent(
                 context = context,
                 date = dateKey,
@@ -61,6 +66,7 @@ object PublicationReminderScheduler {
                 time = timeText,
                 language = data.language.name,
                 previewPath = previewPath,
+                publishingText = publishingText,
             )
             schedule(alarmManager, triggerAtMillis, pendingIntent)
             scheduledDates += dateKey
@@ -108,6 +114,7 @@ object PublicationReminderScheduler {
         time: String,
         language: String,
         previewPath: String = "",
+        publishingText: String = "",
     ): PendingIntent {
         return PendingIntent.getBroadcast(
             context,
@@ -119,8 +126,11 @@ object PublicationReminderScheduler {
                 putExtra(PublicationReminderReceiver.ExtraTime, time)
                 putExtra(PublicationReminderReceiver.ExtraLanguage, language)
                 putExtra(PublicationReminderReceiver.ExtraPreviewPath, previewPath)
+                putExtra(PublicationReminderReceiver.ExtraPublishingText, publishingText)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
+
+    private const val MaxNotificationCopyLength = 8_000
 }

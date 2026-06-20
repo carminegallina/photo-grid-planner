@@ -102,6 +102,7 @@ fun GridScreen(
     modifier: Modifier = Modifier,
 ) {
     var previewPostId by remember { mutableStateOf<String?>(null) }
+    var detailsPostId by remember { mutableStateOf<String?>(null) }
     var pendingImportUris by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
     var confirmReset by remember { mutableStateOf(false) }
     var showLayoutsDialog by remember { mutableStateOf(false) }
@@ -109,6 +110,9 @@ fun GridScreen(
     var renameLayout by remember { mutableStateOf<SavedLayout?>(null) }
     var deleteLayout by remember { mutableStateOf<SavedLayout?>(null) }
     var editPlaceholderPost by remember { mutableStateOf<GridPost?>(null) }
+    var placeholderActionsPost by remember { mutableStateOf<GridPost?>(null) }
+    var replacePlaceholderId by remember { mutableStateOf<String?>(null) }
+    var candidateImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var showPhotoLibrary by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -149,13 +153,10 @@ fun GridScreen(
                         posts = state.visiblePosts,
                         aspectRatio = PreviewMode.Vertical.aspectRatio,
                         onReorderFinished = viewModel::setPostOrder,
-                        onOpen = { post -> previewPostId = post.id },
+                        onOpen = { post -> detailsPostId = post.id },
                         onToggleVisibility = { post -> viewModel.togglePostVisibility(post.id) },
                         onDelete = { post -> viewModel.deletePost(post.id) },
-                        onPlaceholderColorChange = { post, color ->
-                            viewModel.setPlaceholderColor(post.id, color)
-                        },
-                        onEditPlaceholder = { post -> editPlaceholderPost = post },
+                        onPlaceholderClick = { post -> placeholderActionsPost = post },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -175,16 +176,27 @@ fun GridScreen(
 
     PhotoLibraryPicker(
         visible = showPhotoLibrary,
-        mode = PhotoSelectionMode.Multiple,
-        maxSelection = 80,
-        title = "Importa nella griglia",
+        mode = if (replacePlaceholderId == null) PhotoSelectionMode.Multiple else PhotoSelectionMode.Single,
+        maxSelection = if (replacePlaceholderId == null) 80 else 1,
+        title = if (replacePlaceholderId == null) "Importa nella griglia" else "Sostituisci placeholder",
         usedMediaUris = state.posts.flatMap { post -> post.allMediaUris }.toSet(),
-        onDismiss = { showPhotoLibrary = false },
+        onDismiss = {
+            showPhotoLibrary = false
+            replacePlaceholderId = null
+        },
         onPhotosSelected = { uris ->
-            when (uris.size) {
-                0 -> Unit
-                1 -> viewModel.addImages(uris)
-                else -> pendingImportUris = uris
+            val placeholderId = replacePlaceholderId
+            if (placeholderId != null) {
+                uris.firstOrNull()?.let { uri ->
+                    viewModel.replacePlaceholderWithImage(placeholderId, uri)
+                }
+                replacePlaceholderId = null
+            } else {
+                when (uris.size) {
+                    0 -> Unit
+                    1 -> candidateImportUri = uris.first()
+                    else -> pendingImportUris = uris
+                }
             }
         },
     )
@@ -194,6 +206,30 @@ fun GridScreen(
     }
     previewPost?.allMediaUris?.takeIf { it.isNotEmpty() }?.let { uris ->
         FullScreenPreview(uris = uris, onDismiss = { previewPostId = null })
+    }
+
+    val detailsPost = detailsPostId?.let { id -> state.posts.firstOrNull { it.id == id } }
+    detailsPost?.let { post ->
+        PostDetailsSheet(
+            post = post,
+            onDismiss = { detailsPostId = null },
+            onSave = { caption, hashtags, notes, status ->
+                viewModel.setPostDetails(post.id, caption, hashtags, notes, status)
+            },
+            onOpenPreview = { previewPostId = post.id },
+        )
+    }
+
+    candidateImportUri?.let { uri ->
+        CandidatePostPreviewDialog(
+            uri = uri,
+            currentPosts = state.posts,
+            onDismiss = { candidateImportUri = null },
+            onAddAt = { position ->
+                viewModel.insertImage(uri, position)
+                candidateImportUri = null
+            },
+        )
     }
 
     if (pendingImportUris.isNotEmpty()) {
@@ -280,6 +316,30 @@ fun GridScreen(
             onSave = { color, label, type ->
                 viewModel.setPlaceholderDetails(post.id, color, label, type)
                 editPlaceholderPost = null
+            },
+        )
+    }
+
+    placeholderActionsPost?.let { post ->
+        PlaceholderActionsDialog(
+            post = post,
+            onDismiss = { placeholderActionsPost = null },
+            onEdit = {
+                placeholderActionsPost = null
+                editPlaceholderPost = post
+            },
+            onReplace = {
+                placeholderActionsPost = null
+                replacePlaceholderId = post.id
+                showPhotoLibrary = true
+            },
+            onToggleVisibility = {
+                viewModel.togglePostVisibility(post.id)
+                placeholderActionsPost = null
+            },
+            onDelete = {
+                viewModel.deletePost(post.id)
+                placeholderActionsPost = null
             },
         )
     }
@@ -1061,6 +1121,68 @@ private fun PlaceholderEditorDialog(
 }
 
 @Composable
+private fun PlaceholderActionsDialog(
+    post: GridPost,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onReplace: () -> Unit,
+    onToggleVisibility: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { LocalizedText(post.placeholderDisplayLabel) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LocalizedText(
+                    text = "Gestisci questo spazio nella griglia.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ElevatedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    LocalizedText("Modifica")
+                }
+                OutlinedButton(
+                    onClick = onReplace,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    LocalizedText("Sostituisci")
+                }
+                OutlinedButton(
+                    onClick = onToggleVisibility,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    LocalizedText(if (post.hidden) "Mostra nella preview" else "Oscura dalla preview")
+                }
+                OutlinedButton(
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.tertiary,
+                    ),
+                ) {
+                    Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    LocalizedText("Elimina")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                LocalizedText("Chiudi")
+            }
+        },
+    )
+}
+
+@Composable
 private fun CompareLayoutsDialog(
     currentPosts: List<GridPost>,
     savedLayout: SavedLayout,
@@ -1222,8 +1344,7 @@ private fun ReorderableGrid(
     onOpen: (GridPost) -> Unit,
     onToggleVisibility: (GridPost) -> Unit,
     onDelete: (GridPost) -> Unit,
-    onPlaceholderColorChange: (GridPost, Int) -> Unit,
-    onEditPlaceholder: (GridPost) -> Unit,
+    onPlaceholderClick: (GridPost) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val touchSlop = LocalViewConfiguration.current.touchSlop
@@ -1276,8 +1397,7 @@ private fun ReorderableGrid(
                     onDismissMenu = { menuPostId = null },
                     onToggleVisibility = { onToggleVisibility(post) },
                     onDelete = { onDelete(post) },
-                    onPlaceholderColorChange = { color -> onPlaceholderColorChange(post, color) },
-                    onEditPlaceholder = { onEditPlaceholder(post) },
+                    onPlaceholderClick = { onPlaceholderClick(post) },
                     modifier = Modifier
                         .height(cellWidth / aspectRatio)
                         .onGloballyPositioned { coordinates ->
@@ -1317,7 +1437,7 @@ private fun ReorderableGrid(
                                 onDragEnd = {
                                     if (hasDragged) {
                                         onReorderFinished(displayedPosts)
-                                    } else {
+                                    } else if (post.kind == PostKind.Image) {
                                         menuPostId = post.id
                                     }
                                     draggedId = null
