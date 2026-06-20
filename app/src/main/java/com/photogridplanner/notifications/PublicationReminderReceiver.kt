@@ -56,6 +56,7 @@ class PublicationReminderReceiver : BroadcastReceiver() {
             ?.let(BitmapFactory::decodeFile)
         if (preview != null) {
             // The renderer adds padding around the square grid, so BigPicture can show the full mosaic.
+            builder.setLargeIcon(preview)
             builder.setStyle(
                 Notification.BigPictureStyle()
                     .bigPicture(preview)

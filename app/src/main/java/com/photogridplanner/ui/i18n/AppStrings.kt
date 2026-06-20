@@ -104,6 +104,9 @@ class AppStrings(private val language: AppLanguage) {
         Regex("""^Suggerito (.+)$""").matchEntire(raw)?.let {
             return "Suggested ${it.groupValues[1]}"
         }
+        Regex("""^Ora impostata: (.+)$""").matchEntire(raw)?.let {
+            return "Set time: ${it.groupValues[1]}"
+        }
         Regex("""^Orario consigliato: (.+)$""").matchEntire(raw)?.let {
             return "Suggested time: ${it.groupValues[1]}"
         }
@@ -461,6 +464,7 @@ private val EnglishStrings = mapOf(
     "Giornata" to "Day",
     "Piano giornata" to "Day plan",
     "Orario di pubblicazione" to "Publishing time",
+    "Imposta ora" to "Set time",
     "Orario consigliato" to "Suggested time",
     "Cambia orario" to "Change time",
     "Usa orario consigliato" to "Use suggested time",

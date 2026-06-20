@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -730,28 +731,14 @@ private fun CalendarDayDetailsDialog(
     onExportFolder: () -> Unit,
 ) {
     val hasMedia = posts.any { it.allMediaUris.isNotEmpty() }
-    var editableNote by rememberSaveable(date.toString()) { mutableStateOf(note) }
-    var editableTime by rememberSaveable(date.toString()) { mutableStateOf(recommendedTime) }
-    var showTimePicker by rememberSaveable(date.toString()) { mutableStateOf(false) }
-    var showNoteEditor by rememberSaveable(date.toString()) { mutableStateOf(note.isNotBlank()) }
-    var hasUnsavedPlanChanges by rememberSaveable(date.toString()) { mutableStateOf(false) }
-
-    fun savePendingPlanChanges() {
-        if (hasUnsavedPlanChanges) {
-            onSavePlan(editableNote, editableTime)
-            hasUnsavedPlanChanges = false
-        }
-    }
-
-    fun dismissAndSavePlan() {
-        savePendingPlanChanges()
-        onDismiss()
-    }
-
     val suggestedTime = suggestedTimeForDate(date)
+    var selectedTime by rememberSaveable(date.toString()) {
+        mutableStateOf(recommendedTime.ifBlank { suggestedTime })
+    }
+    var showTimePicker by rememberSaveable(date.toString()) { mutableStateOf(false) }
 
     AlertDialog(
-        onDismissRequest = ::dismissAndSavePlan,
+        onDismissRequest = onDismiss,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 LocalizedText("Giornata")
@@ -811,63 +798,48 @@ private fun CalendarDayDetailsDialog(
                     shape = RoundedCornerShape(10.dp),
                 ) {
                     Column(
-                        modifier = Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
+                        LocalizedText(
+                            text = "Ora impostata: $selectedTime",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
-                        }
-                        OutlinedButton(
-                            onClick = { showTimePicker = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            LocalizedText("Cambia orario", style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.width(8.dp))
-                            LocalizedText(
-                                editableTime.ifBlank { suggestedTime },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                editableTime = suggestedTime
-                                hasUnsavedPlanChanges = false
-                                onSavePlan(editableNote, suggestedTime)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            LocalizedText("Usa orario consigliato", style = MaterialTheme.typography.labelLarge)
-                            Spacer(Modifier.width(8.dp))
-                            LocalizedText(
-                                suggestedTime,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        if (showNoteEditor) {
-                            OutlinedTextField(
-                                value = editableNote,
-                                onValueChange = {
-                                    editableNote = it.take(240)
-                                    hasUnsavedPlanChanges = true
+                            OutlinedButton(
+                                onClick = { showTimePicker = true },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                LocalizedText(
+                                    "Imposta ora",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    selectedTime = suggestedTime
+                                    onSavePlan(note, suggestedTime)
                                 },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 2,
-                                label = { LocalizedText("Note") },
-                            )
-                        } else {
-                            TextButton(onClick = { showNoteEditor = true }) {
-                                LocalizedText("Aggiungi nota")
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                LocalizedText(
+                                    "Suggerito $suggestedTime",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    maxLines = 1,
+                                )
                             }
                         }
                     }
@@ -897,10 +869,7 @@ private fun CalendarDayDetailsDialog(
                 }
                 if (posts.isNotEmpty()) {
                     TextButton(
-                        onClick = {
-                            hasUnsavedPlanChanges = false
-                            onClearDayPosts()
-                        },
+                        onClick = onClearDayPosts,
                     ) {
                         Icon(
                             Icons.Rounded.Clear,
@@ -915,7 +884,7 @@ private fun CalendarDayDetailsDialog(
                         )
                     }
                 }
-                TextButton(onClick = ::dismissAndSavePlan) {
+                TextButton(onClick = onDismiss) {
                     LocalizedText("Chiudi")
                 }
             }
@@ -924,14 +893,11 @@ private fun CalendarDayDetailsDialog(
 
     if (showTimePicker) {
         ClockTimePickerDialog(
-            initialTime = editableTime.ifBlank { suggestedTime },
+            initialTime = selectedTime,
             onDismiss = { showTimePicker = false },
             onConfirm = { time ->
-                if (editableTime != time) {
-                    editableTime = time
-                    hasUnsavedPlanChanges = false
-                    onSavePlan(editableNote, time)
-                }
+                selectedTime = time
+                onSavePlan(note, time)
                 showTimePicker = false
             },
         )
@@ -956,17 +922,19 @@ private fun ClockTimePickerDialog(
         onDismissRequest = onDismiss,
         title = { LocalizedText("Scegli orario") },
         text = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                TimePicker(state = timePickerState)
-            }
+            TimePicker(state = timePickerState)
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(formatTime(timePickerState.hour, timePickerState.minute))
+                    onConfirm(
+                        String.format(
+                            Locale.US,
+                            "%02d:%02d",
+                            timePickerState.hour,
+                            timePickerState.minute,
+                        ),
+                    )
                 },
             ) {
                 LocalizedText("Conferma")

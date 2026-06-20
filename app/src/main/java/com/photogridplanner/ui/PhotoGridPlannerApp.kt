@@ -206,6 +206,7 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
 
             if (shouldRequestInitialPermissions) {
                 InitialPermissionRequester(
+                    onNotificationsGranted = { viewModel.setNotificationsEnabled(true) },
                     onFinished = { viewModel.setInitialPermissionPromptCompleted() },
                 )
             }
@@ -233,13 +234,17 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
 
 @Composable
 private fun InitialPermissionRequester(
+    onNotificationsGranted: () -> Unit,
     onFinished: () -> Unit,
 ) {
     val context = LocalContext.current
     var requestStarted by rememberSaveable { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { onFinished() },
+        onResult = { granted ->
+            if (granted) onNotificationsGranted()
+            onFinished()
+        },
     )
     val photoPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),

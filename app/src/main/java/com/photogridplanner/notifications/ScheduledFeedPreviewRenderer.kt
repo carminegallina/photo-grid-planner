@@ -80,7 +80,8 @@ object ScheduledFeedPreviewRenderer {
                 }
             }
 
-            val directory = File(context.cacheDir, "notification_previews").apply { mkdirs() }
+            // Keep scheduled previews outside the cache so they survive app closure and cache cleanup.
+            val directory = File(context.filesDir, "notification_previews").apply { mkdirs() }
             val file = File(directory, "schedule_${date.replace('-', '_')}.png")
             FileOutputStream(file).use { stream ->
                 output.compress(Bitmap.CompressFormat.PNG, 100, stream)
