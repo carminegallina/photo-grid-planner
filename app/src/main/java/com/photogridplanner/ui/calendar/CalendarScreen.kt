@@ -265,6 +265,12 @@ fun CalendarScreen(
             onDismiss = { openDateKey = null },
             onOpenPost = { post -> previewUris = post.allMediaUris },
             onSavePlan = { note, time -> viewModel.setCalendarDayPlan(date, note, time) },
+            onClearDayPosts = {
+                val idsToClear = postsForDate.map { it.id }.toSet()
+                selectedPostIds.value = selectedPostIds.value.filterNot(idsToClear::contains)
+                viewModel.setPostsSchedule(idsToClear, null)
+                openDateKey = null
+            },
             onExportZip = {
                 exportPosts = postsForDate
                 exportDateLabel = date.toString()
@@ -719,6 +725,7 @@ private fun CalendarDayDetailsDialog(
     onDismiss: () -> Unit,
     onOpenPost: (GridPost) -> Unit,
     onSavePlan: (String, String) -> Unit,
+    onClearDayPosts: () -> Unit,
     onExportZip: () -> Unit,
     onExportFolder: () -> Unit,
 ) {
@@ -726,9 +733,22 @@ private fun CalendarDayDetailsDialog(
     var editableNote by rememberSaveable(date.toString()) { mutableStateOf(note) }
     var editableTime by rememberSaveable(date.toString()) { mutableStateOf(recommendedTime) }
     var showTimePicker by rememberSaveable(date.toString()) { mutableStateOf(false) }
+    var hasUnsavedPlanChanges by rememberSaveable(date.toString()) { mutableStateOf(false) }
+
+    fun savePendingPlanChanges() {
+        if (hasUnsavedPlanChanges) {
+            onSavePlan(editableNote, editableTime)
+            hasUnsavedPlanChanges = false
+        }
+    }
+
+    fun dismissAndSavePlan() {
+        savePendingPlanChanges()
+        onDismiss()
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = ::dismissAndSavePlan,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 LocalizedText("Giornata")
@@ -809,17 +829,35 @@ private fun CalendarDayDetailsDialog(
                         ) {
                             Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            LocalizedText("Orario consigliato: ${editableTime.ifBlank { suggestedTimeForDate(date) }}")
+                            Column {
+                                LocalizedText(
+                                    "Orario di pubblicazione",
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                LocalizedText(
+                                    editableTime.ifBlank { suggestedTimeForDate(date) },
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            LocalizedText(
+                                "Cambia",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                         OutlinedTextField(
                             value = editableNote,
-                            onValueChange = { editableNote = it.take(240) },
+                            onValueChange = {
+                                editableNote = it.take(240)
+                                hasUnsavedPlanChanges = true
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             label = { LocalizedText("Note") },
                         )
                         OutlinedButton(
-                            onClick = { onSavePlan(editableNote, editableTime) },
+                            onClick = { savePendingPlanChanges() },
                         ) {
                             LocalizedText("Salva piano")
                         }
@@ -848,7 +886,27 @@ private fun CalendarDayDetailsDialog(
                     Spacer(Modifier.width(8.dp))
                     LocalizedText("Cartella")
                 }
-                TextButton(onClick = onDismiss) {
+                if (posts.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            hasUnsavedPlanChanges = false
+                            onClearDayPosts()
+                        },
+                    ) {
+                        Icon(
+                            Icons.Rounded.Clear,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        LocalizedText(
+                            "Svuota giornata",
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                TextButton(onClick = ::dismissAndSavePlan) {
                     LocalizedText("Chiudi")
                 }
             }
@@ -860,7 +918,10 @@ private fun CalendarDayDetailsDialog(
             initialTime = editableTime.ifBlank { suggestedTimeForDate(date) },
             onDismiss = { showTimePicker = false },
             onConfirm = { time ->
-                editableTime = time
+                if (editableTime != time) {
+                    editableTime = time
+                    hasUnsavedPlanChanges = true
+                }
                 showTimePicker = false
             },
         )
