@@ -97,6 +97,7 @@ data class PlannerData(
     val previewMode: PreviewMode = PreviewMode.Vertical,
     val showHiddenPosts: Boolean = true,
     val showTutorialOnLaunch: Boolean = true,
+    val initialPermissionPromptCompleted: Boolean = false,
     val notificationsEnabled: Boolean = false,
     val language: AppLanguage = defaultAppLanguageForDevice(),
     val savedLayouts: List<SavedLayout> = emptyList(),

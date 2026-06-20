@@ -459,6 +459,7 @@ private val EnglishStrings = mapOf(
     "Piano giornata" to "Day plan",
     "Orario di pubblicazione" to "Publishing time",
     "Cambia" to "Change",
+    "Aggiungi nota" to "Add note",
     "Note" to "Notes",
     "Salva piano" to "Save plan",
     "Svuota giornata" to "Clear day",

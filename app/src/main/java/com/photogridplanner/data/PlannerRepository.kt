@@ -312,6 +312,10 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(showTutorialOnLaunch = show) }
     }
 
+    suspend fun setInitialPermissionPromptCompleted(completed: Boolean) {
+        updateData { current -> current.copy(initialPermissionPromptCompleted = completed) }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         updateData { current -> current.copy(notificationsEnabled = enabled) }
     }
@@ -324,6 +328,7 @@ class PlannerRepository(context: Context) {
         updateData { current ->
             PlannerData(
                 showTutorialOnLaunch = current.showTutorialOnLaunch,
+                initialPermissionPromptCompleted = current.initialPermissionPromptCompleted,
                 notificationsEnabled = current.notificationsEnabled,
                 language = current.language,
             )
@@ -354,6 +359,7 @@ class PlannerRepository(context: Context) {
             preferences[Keys.PreviewMode] = next.previewMode.name
             preferences[Keys.ShowHiddenPosts] = next.showHiddenPosts
             preferences[Keys.ShowTutorialOnLaunch] = next.showTutorialOnLaunch
+            preferences[Keys.InitialPermissionPromptCompleted] = next.initialPermissionPromptCompleted
             preferences[Keys.NotificationsEnabled] = next.notificationsEnabled
             preferences[Keys.AppLanguage] = next.language.name
             preferences[Keys.SavedLayoutsJson] = encodeSavedLayouts(next.savedLayouts)
@@ -371,6 +377,7 @@ class PlannerRepository(context: Context) {
             previewMode = mode,
             showHiddenPosts = this[Keys.ShowHiddenPosts] ?: true,
             showTutorialOnLaunch = this[Keys.ShowTutorialOnLaunch] ?: true,
+            initialPermissionPromptCompleted = this[Keys.InitialPermissionPromptCompleted] ?: false,
             notificationsEnabled = this[Keys.NotificationsEnabled] ?: false,
             language = runCatching {
                 AppLanguage.valueOf(this[Keys.AppLanguage] ?: defaultAppLanguageForDevice().name)
@@ -550,6 +557,7 @@ class PlannerRepository(context: Context) {
         val PreviewMode = stringPreferencesKey("preview_mode")
         val ShowHiddenPosts = booleanPreferencesKey("show_hidden_posts")
         val ShowTutorialOnLaunch = booleanPreferencesKey("show_tutorial_on_launch")
+        val InitialPermissionPromptCompleted = booleanPreferencesKey("initial_permission_prompt_completed")
         val NotificationsEnabled = booleanPreferencesKey("notifications_enabled")
         val AppLanguage = stringPreferencesKey("app_language")
         val SavedLayoutsJson = stringPreferencesKey("saved_layouts_json")

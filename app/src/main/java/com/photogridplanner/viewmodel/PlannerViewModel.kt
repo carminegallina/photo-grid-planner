@@ -108,6 +108,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.setShowTutorialOnLaunch(show) }
     }
 
+    fun setInitialPermissionPromptCompleted(completed: Boolean = true) {
+        viewModelScope.launch { repository.setInitialPermissionPromptCompleted(completed) }
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch { repository.setNotificationsEnabled(enabled) }
     }

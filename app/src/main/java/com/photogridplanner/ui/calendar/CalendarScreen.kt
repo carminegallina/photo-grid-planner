@@ -733,6 +733,7 @@ private fun CalendarDayDetailsDialog(
     var editableNote by rememberSaveable(date.toString()) { mutableStateOf(note) }
     var editableTime by rememberSaveable(date.toString()) { mutableStateOf(recommendedTime) }
     var showTimePicker by rememberSaveable(date.toString()) { mutableStateOf(false) }
+    var showNoteEditor by rememberSaveable(date.toString()) { mutableStateOf(note.isNotBlank()) }
     var hasUnsavedPlanChanges by rememberSaveable(date.toString()) { mutableStateOf(false) }
 
     fun savePendingPlanChanges() {
@@ -817,49 +818,61 @@ private fun CalendarDayDetailsDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
-                            LocalizedText(
-                                text = "Suggerito ${suggestedTimeForDate(date)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
                         }
-                        OutlinedButton(
-                            onClick = { showTimePicker = true },
-                            modifier = Modifier.fillMaxWidth(),
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showTimePicker = true },
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
+                            ),
                         ) {
-                            Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                LocalizedText(
-                                    "Orario di pubblicazione",
-                                    style = MaterialTheme.typography.labelLarge,
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp),
                                 )
-                                LocalizedText(
-                                    editableTime.ifBlank { suggestedTimeForDate(date) },
-                                    style = MaterialTheme.typography.titleMedium,
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    LocalizedText(
+                                        "Orario di pubblicazione",
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    LocalizedText(
+                                        editableTime.ifBlank { suggestedTimeForDate(date) },
+                                        style = MaterialTheme.typography.headlineSmall,
+                                    )
+                                }
+                                Icon(
+                                    Icons.Rounded.ChevronRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp),
                                 )
                             }
-                            Spacer(Modifier.width(12.dp))
-                            LocalizedText(
-                                "Cambia",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
                         }
-                        OutlinedTextField(
-                            value = editableNote,
-                            onValueChange = {
-                                editableNote = it.take(240)
-                                hasUnsavedPlanChanges = true
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 2,
-                            label = { LocalizedText("Note") },
-                        )
-                        OutlinedButton(
-                            onClick = { savePendingPlanChanges() },
-                        ) {
-                            LocalizedText("Salva piano")
+                        if (showNoteEditor) {
+                            OutlinedTextField(
+                                value = editableNote,
+                                onValueChange = {
+                                    editableNote = it.take(240)
+                                    hasUnsavedPlanChanges = true
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                label = { LocalizedText("Note") },
+                            )
+                        } else {
+                            TextButton(onClick = { showNoteEditor = true }) {
+                                LocalizedText("Aggiungi nota")
+                            }
                         }
                     }
                 }

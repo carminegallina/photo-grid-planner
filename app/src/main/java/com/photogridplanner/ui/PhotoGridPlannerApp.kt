@@ -2,6 +2,12 @@ package com.photogridplanner.ui
 
 import com.photogridplanner.ui.i18n.LocalizedText
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -36,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +91,7 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
     var tutorialDismissedThisLaunch by rememberSaveable { mutableStateOf(false) }
     var forceTutorial by rememberSaveable { mutableStateOf(false) }
     var showStartupAnimation by remember { mutableStateOf(true) }
+    val shouldRequestInitialPermissions = !showStartupAnimation && !state.initialPermissionPromptCompleted
 
     CompositionLocalProvider(
         LocalAppStrings provides appStringsFor(state.language),
@@ -195,7 +204,15 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
                 }
             }
 
-            if (!showStartupAnimation && ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial)) {
+            if (shouldRequestInitialPermissions) {
+                InitialPermissionRequester(
+                    onFinished = { viewModel.setInitialPermissionPromptCompleted() },
+                )
+            }
+
+            if (!showStartupAnimation && !shouldRequestInitialPermissions &&
+                ((state.showTutorialOnLaunch && !tutorialDismissedThisLaunch) || forceTutorial)
+            ) {
                 AppTutorialDialog(
                     onClose = { dontShowAgain ->
                         tutorialDismissedThisLaunch = true
@@ -212,6 +229,77 @@ fun PhotoGridPlannerApp(viewModel: PlannerViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun InitialPermissionRequester(
+    onFinished: () -> Unit,
+) {
+    val context = LocalContext.current
+    var requestStarted by rememberSaveable { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { onFinished() },
+    )
+    val photoPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = {
+            if (context.needsNotificationPermission()) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onFinished()
+            }
+        },
+    )
+
+    LaunchedEffect(Unit) {
+        if (requestStarted) return@LaunchedEffect
+        requestStarted = true
+        when {
+            context.needsPhotoLibraryPermission() -> {
+                photoPermissionLauncher.launch(initialPhotoLibraryPermissions())
+            }
+
+            context.needsNotificationPermission() -> {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+
+            else -> onFinished()
+        }
+    }
+}
+
+private fun initialPhotoLibraryPermissions(): Array<String> {
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+        )
+
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+        )
+
+        else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+}
+
+private fun Context.needsPhotoLibraryPermission(): Boolean {
+    val fullAccess = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+            checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+        }
+
+        else -> checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+    }
+    val partialAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        checkSelfPermission(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+    return !fullAccess && !partialAccess
+}
+
+private fun Context.needsNotificationPermission(): Boolean {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 }
 
 @Composable

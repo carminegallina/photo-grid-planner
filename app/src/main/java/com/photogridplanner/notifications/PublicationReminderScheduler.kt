@@ -28,14 +28,21 @@ object PublicationReminderScheduler {
         }
 
         val now = System.currentTimeMillis()
+        val scheduledPostsByDate = data.posts
+            .asSequence()
+            .filter { post -> post.kind == PostKind.Image && !post.scheduledDate.isNullOrBlank() }
+            .groupBy { post -> post.scheduledDate.orEmpty() }
         val scheduledDates = mutableSetOf<String>()
-        data.calendarPlans.forEach { plan ->
-            val date = runCatching { LocalDate.parse(plan.date) }.getOrNull() ?: return@forEach
-            val time = runCatching { LocalTime.parse(plan.recommendedTime) }.getOrNull() ?: return@forEach
-            val postCount = data.posts.count { post ->
-                post.kind == PostKind.Image && post.scheduledDate == plan.date
+        scheduledPostsByDate.forEach { (dateKey, scheduledPosts) ->
+            val date = runCatching { LocalDate.parse(dateKey) }.getOrNull() ?: return@forEach
+            val timeText = data.calendarPlanFor(dateKey)
+                ?.recommendedTime
+                ?.takeIf { it.isNotBlank() }
+                ?: defaultReminderTime(date)
+            val time = runCatching { LocalTime.parse(timeText) }.getOrElse {
+                LocalTime.parse(defaultReminderTime(date))
             }
-            if (postCount == 0) return@forEach
+            val postCount = scheduledPosts.size
 
             val triggerAtMillis = date.atTime(time)
                 .atZone(ZoneId.systemDefault())
@@ -44,21 +51,33 @@ object PublicationReminderScheduler {
             if (triggerAtMillis <= now) return@forEach
 
             val previewPath = ScheduledFeedPreviewRenderer
-                .render(context = context, posts = data.posts, date = plan.date)
+                .render(context = context, posts = data.posts, date = dateKey)
                 ?.absolutePath
                 .orEmpty()
             val pendingIntent = reminderIntent(
                 context = context,
-                date = plan.date,
+                date = dateKey,
                 postCount = postCount,
-                time = plan.recommendedTime,
+                time = timeText,
                 language = data.language.name,
                 previewPath = previewPath,
             )
             schedule(alarmManager, triggerAtMillis, pendingIntent)
-            scheduledDates += plan.date
+            scheduledDates += dateKey
         }
         preferences.edit().putStringSet(ScheduledDatesKey, scheduledDates).apply()
+    }
+
+    private fun defaultReminderTime(date: LocalDate): String {
+        return when (date.dayOfWeek.value) {
+            1 -> "18:30"
+            2 -> "19:00"
+            3 -> "12:30"
+            4 -> "19:00"
+            5 -> "18:00"
+            6 -> "11:00"
+            else -> "10:30"
+        }
     }
 
     private fun schedule(

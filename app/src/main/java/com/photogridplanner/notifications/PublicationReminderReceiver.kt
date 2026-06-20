@@ -55,14 +55,10 @@ class PublicationReminderReceiver : BroadcastReceiver() {
             ?.takeIf { it.isNotBlank() }
             ?.let(BitmapFactory::decodeFile)
         if (preview != null) {
-            builder.setStyle(
-                Notification.BigPictureStyle()
-                    .bigPicture(preview)
-                    .setSummaryText(body),
-            )
-        } else {
-            builder.setStyle(Notification.BigTextStyle().bigText(body))
+            // A compact thumbnail preserves the entire planned grid instead of cropping tall mosaics.
+            builder.setLargeIcon(preview)
         }
+        builder.setStyle(Notification.BigTextStyle().bigText(body))
         val notification = builder.build()
         manager.notify(intent.getStringExtra(ExtraDate).orEmpty().hashCode(), notification)
     }

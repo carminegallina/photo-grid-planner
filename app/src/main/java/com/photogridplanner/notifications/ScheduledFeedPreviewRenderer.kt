@@ -20,8 +20,10 @@ import kotlinx.coroutines.withContext
 /** Renders scheduled posts in their real grid positions for the publication notification. */
 object ScheduledFeedPreviewRenderer {
     private const val Columns = 3
-    private const val CellWidth = 240
-    private const val CellHeight = 320
+    private const val CellWidth = 160
+    private const val CellHeight = 200
+    private const val PreviewSize = 420
+    private const val PreviewInset = 18f
     private const val MaxDecodeSize = 720
 
     suspend fun render(
@@ -38,16 +40,25 @@ object ScheduledFeedPreviewRenderer {
         }
         if (scheduled.isEmpty()) return@withContext null
 
-        val rows = scheduled.map { it.index / Columns }.distinct().sorted()
-        val rowPositions = rows.withIndex().associate { (position, row) -> row to position }
+        val firstRow = scheduled.minOf { it.index / Columns }
+        val lastRow = scheduled.maxOf { it.index / Columns }
+        val rowCount = lastRow - firstRow + 1
+        val sourceGridWidth = CellWidth * Columns.toFloat()
+        val sourceGridHeight = CellHeight * rowCount.toFloat()
+        val availableSize = PreviewSize - PreviewInset * 2
+        val scale = minOf(availableSize / sourceGridWidth, availableSize / sourceGridHeight)
+        val gridWidth = sourceGridWidth * scale
+        val gridHeight = sourceGridHeight * scale
+        val startX = (PreviewSize - gridWidth) / 2f
+        val startY = (PreviewSize - gridHeight) / 2f
         val output = Bitmap.createBitmap(
-            CellWidth * Columns,
-            CellHeight * rows.size.coerceAtLeast(1),
+            PreviewSize,
+            PreviewSize,
             Bitmap.Config.ARGB_8888,
         )
         val canvas = Canvas(output)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
-        canvas.drawColor(Color.BLACK)
+        canvas.drawColor(Color.rgb(20, 22, 29))
 
         try {
             scheduled.forEach { cell ->
@@ -55,15 +66,15 @@ object ScheduledFeedPreviewRenderer {
                     ImageLoader.loadBitmap(context, Uri.parse(cell.post.coverUri), maxSize = MaxDecodeSize)
                 }.getOrNull() ?: return@forEach
                 try {
-                    val row = rowPositions[cell.index / Columns] ?: return@forEach
+                    val row = cell.index / Columns - firstRow
                     val column = cell.index % Columns
                     val destination = RectF(
-                        (column * CellWidth).toFloat(),
-                        (row * CellHeight).toFloat(),
-                        ((column + 1) * CellWidth).toFloat(),
-                        ((row + 1) * CellHeight).toFloat(),
+                        startX + column * CellWidth * scale,
+                        startY + row * CellHeight * scale,
+                        startX + (column + 1) * CellWidth * scale,
+                        startY + (row + 1) * CellHeight * scale,
                     )
-                    canvas.drawBitmap(bitmap, profileSourceRect(bitmap), destination, paint)
+                    canvas.drawBitmap(bitmap, instagramSourceRect(bitmap), destination, paint)
                 } finally {
                     bitmap.recycle()
                 }
@@ -80,7 +91,8 @@ object ScheduledFeedPreviewRenderer {
         }
     }
 
-    private fun profileSourceRect(bitmap: Bitmap): Rect {
+    private fun instagramSourceRect(bitmap: Bitmap): Rect {
+        // Generated tiles are 4:5. Keeping that ratio prevents gaps across a mosaic seam.
         val targetAspect = CellWidth.toFloat() / CellHeight.toFloat()
         val sourceAspect = bitmap.width.toFloat() / bitmap.height.toFloat()
         return if (sourceAspect > targetAspect) {
