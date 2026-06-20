@@ -39,8 +39,8 @@ android {
         applicationId = "com.photogridplanner"
         minSdk = 26
         targetSdk = 36
-        versionCode = 38
-        versionName = "1.5.21-beta"
+        versionCode = 39
+        versionName = "1.5.22-beta"
     }
 
     buildFeatures {

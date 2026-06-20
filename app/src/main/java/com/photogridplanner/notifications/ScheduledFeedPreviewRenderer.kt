@@ -20,7 +20,9 @@ import kotlinx.coroutines.withContext
 /** Renders scheduled posts in their real grid positions for the publication notification. */
 object ScheduledFeedPreviewRenderer {
     private const val Columns = 3
-    private const val CellWidth = 160
+    // Instagram's current profile grid shows 4:5 posts in a 3:4 cell.
+    // The cutter preserves a 1,012 px visible area inside its 1,080 px output tile.
+    private const val CellWidth = 150
     private const val CellHeight = 200
     private const val PreviewSize = 420
     private const val PreviewInset = 18f
@@ -74,7 +76,7 @@ object ScheduledFeedPreviewRenderer {
                         startX + (column + 1) * CellWidth * scale,
                         startY + (row + 1) * CellHeight * scale,
                     )
-                    canvas.drawBitmap(bitmap, instagramSourceRect(bitmap), destination, paint)
+                    canvas.drawBitmap(bitmap, profileVisibleSourceRect(bitmap), destination, paint)
                 } finally {
                     bitmap.recycle()
                 }
@@ -92,20 +94,18 @@ object ScheduledFeedPreviewRenderer {
         }
     }
 
-    private fun instagramSourceRect(bitmap: Bitmap): Rect {
-        // Generated tiles are 4:5. Keeping that ratio prevents gaps across a mosaic seam.
-        val targetAspect = CellWidth.toFloat() / CellHeight.toFloat()
-        val sourceAspect = bitmap.width.toFloat() / bitmap.height.toFloat()
-        return if (sourceAspect > targetAspect) {
-            val width = (bitmap.height * targetAspect).roundToInt().coerceAtMost(bitmap.width)
-            val left = ((bitmap.width - width) / 2).coerceAtLeast(0)
-            Rect(left, 0, left + width, bitmap.height)
-        } else {
-            val height = (bitmap.width / targetAspect).roundToInt().coerceAtMost(bitmap.height)
-            val top = ((bitmap.height - height) / 2).coerceAtLeast(0)
-            Rect(0, top, bitmap.width, top + height)
-        }
+    private fun profileVisibleSourceRect(bitmap: Bitmap): Rect {
+        // Mosaic tiles exported for a profile overlap by 34 px on both sides. This is
+        // exactly the area hidden by Instagram's 3:4 profile grid, so removing it here
+        // reconstructs the same continuous image the user will see in the profile.
+        val visibleWidth = (bitmap.width * ProfileVisibleRatio)
+            .roundToInt()
+            .coerceIn(1, bitmap.width)
+        val left = ((bitmap.width - visibleWidth) / 2).coerceAtLeast(0)
+        return Rect(left, 0, left + visibleWidth, bitmap.height)
     }
+
+    private const val ProfileVisibleRatio = 1012f / 1080f
 
     private data class ScheduledCell(
         val index: Int,
