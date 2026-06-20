@@ -467,6 +467,7 @@ private val EnglishStrings = mapOf(
     "Imposta ora" to "Set time",
     "Ora attuale" to "Current time",
     "Personalizzato" to "Custom",
+    "Personalizza" to "Customize",
     "Suggerito" to "Suggested",
     "Orario consigliato" to "Suggested time",
     "Cambia orario" to "Change time",

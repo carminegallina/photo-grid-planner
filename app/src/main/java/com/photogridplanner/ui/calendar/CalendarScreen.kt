@@ -904,11 +904,6 @@ private fun DayPublicationPlan(
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     LocalizedText("Piano giornata", style = MaterialTheme.typography.titleSmall)
-                    LocalizedText(
-                        "Ora attuale",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 LocalizedText(
                     selectedTime,
@@ -929,13 +924,8 @@ private fun DayPublicationPlan(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         LocalizedText(
-                            "Personalizzato",
+                            "Personalizza",
                             style = MaterialTheme.typography.labelMedium,
-                        )
-                        LocalizedText(
-                            selectedTime,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
