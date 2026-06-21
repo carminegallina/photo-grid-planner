@@ -18,12 +18,14 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 object TemplateCutter {
     private const val MaxDecodeSize = 5400
     private const val OutputExtension = "png"
     private const val OutputMimeType = "image/png"
+    private const val GalleryInsertionSpacingMillis = 1_100L
 
     suspend fun renderAndSave(
         context: Context,
@@ -91,6 +93,11 @@ object TemplateCutter {
                     )
                 } finally {
                     bitmap.recycle()
+                }
+                // Keep DATE_ADDED distinct too: Instagram may ignore DATE_TAKEN when it
+                // builds its picker, and equal creation seconds lead to random slide order.
+                if (destination == SaveDestination.Gallery && slide > 0) {
+                    delay(GalleryInsertionSpacingMillis)
                 }
             }
             results.filterNotNull()

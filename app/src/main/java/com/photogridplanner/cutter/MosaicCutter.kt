@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 object MosaicCutter {
@@ -25,6 +26,7 @@ object MosaicCutter {
     private const val MaxDecodeSize = 10800
     private const val OutputExtension = "png"
     private const val OutputMimeType = "image/png"
+    private const val GalleryInsertionSpacingMillis = 1_100L
 
     suspend fun cutAndSave(
         context: Context,
@@ -36,6 +38,7 @@ object MosaicCutter {
         frame: CutterFrame = CutterFrame(),
         namePrefix: String = "grid",
         exportOrder: CutExportOrder = CutExportOrder.Visual,
+        preserveGallerySelectionOrder: Boolean = false,
     ): List<CutTileResult> = withContext(Dispatchers.IO) {
         require(spec.columns > 0 && spec.rows > 0) { "La griglia deve avere almeno una riga e una colonna." }
         require(spec.tileCount <= MaxTiles) { "Riduci il mosaico: massimo $MaxTiles tasselli per taglio." }
@@ -73,7 +76,7 @@ object MosaicCutter {
 
         try {
             val savedResults = MutableList<CutTileResult?>(cutPlans.size) { null }
-            savePlans.forEach { plan ->
+            savePlans.forEachIndexed { saveIndex, plan ->
                 val tile = if (usesProfileSafeArea) {
                     createProfileSafeTile(mosaic, plan.row, plan.column, format)
                 } else {
@@ -99,6 +102,14 @@ object MosaicCutter {
                     )
                 } finally {
                     tile.recycle()
+                }
+                // Instagram can sort freshly-created media by DATE_ADDED, which has second
+                // precision on some providers. Distinct insertions avoid unstable slide order.
+                if (preserveGallerySelectionOrder &&
+                    destination == SaveDestination.Gallery &&
+                    saveIndex < savePlans.lastIndex
+                ) {
+                    delay(GalleryInsertionSpacingMillis)
                 }
             }
             savedResults.filterNotNull()

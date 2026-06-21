@@ -401,6 +401,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
         frame: CutterFrame = CutterFrame(),
         namePrefix: String,
         exportOrder: CutExportOrder = CutExportOrder.Visual,
+        preserveGallerySelectionOrder: Boolean = false,
         doneMessage: (Int) -> String,
     ) {
         scope.launch {
@@ -417,6 +418,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                     frame = frame,
                     namePrefix = namePrefix,
                     exportOrder = exportOrder,
+                    preserveGallerySelectionOrder = preserveGallerySelectionOrder,
                 )
             }.onSuccess { cutResults ->
                 results = cutResults
@@ -739,6 +741,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                                     spec = spec,
                                     transform = transform,
                                     namePrefix = "carousel",
+                                    preserveGallerySelectionOrder = true,
                                     doneMessage = { "Create $it slide 4:5." },
                                 )
                             },
