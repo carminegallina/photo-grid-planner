@@ -12,7 +12,6 @@ import com.photogridplanner.data.PlannerData
 import com.photogridplanner.data.PlannerRepository
 import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PostKind
-import com.photogridplanner.data.PostStatus
 import com.photogridplanner.data.PreviewMode
 import com.photogridplanner.notifications.PublicationReminderScheduler
 import java.time.LocalDate
@@ -52,10 +51,24 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun insertImages(uris: List<Uri>, position: Int) {
+        persistReadAccess(uris)
+        viewModelScope.launch {
+            repository.insertImages(uris.map { it.toString() }, position)
+        }
+    }
+
     fun addCarousel(uris: List<Uri>) {
         persistReadAccess(uris)
         viewModelScope.launch {
             repository.addCarousel(uris.map { it.toString() })
+        }
+    }
+
+    fun insertCarousel(uris: List<Uri>, position: Int) {
+        persistReadAccess(uris)
+        viewModelScope.launch {
+            repository.insertCarousel(uris.map { it.toString() }, position)
         }
     }
 
@@ -78,13 +91,11 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun setPostDetails(
         id: String,
-        caption: String,
-        hashtags: String,
-        notes: String,
-        status: PostStatus,
+        description: String,
+        tags: String,
     ) {
         viewModelScope.launch {
-            repository.setPostDetails(id, caption, hashtags, notes, status)
+            repository.setPostDetails(id, description, tags)
         }
     }
 
@@ -139,6 +150,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch { repository.setNotificationsEnabled(enabled) }
+    }
+
+    fun setAnalyzeImports(enabled: Boolean) {
+        viewModelScope.launch { repository.setAnalyzeImports(enabled) }
     }
 
     fun setLanguage(language: AppLanguage) {

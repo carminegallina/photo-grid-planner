@@ -55,41 +55,48 @@ import com.photogridplanner.ui.components.AsyncUriImage
 import com.photogridplanner.ui.i18n.LocalizedText
 import kotlin.math.roundToInt
 
-private const val CandidatePostId = "candidate-preview-post"
+enum class PendingGridImportType {
+    Post,
+    Carousel,
+    Mosaic,
+}
+
+data class PendingGridImport(
+    val uris: List<Uri>,
+    val type: PendingGridImportType,
+)
+
+private const val CandidatePostIdPrefix = "candidate-preview-post"
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CandidatePostPreviewDialog(
-    uri: Uri,
+    pendingImport: PendingGridImport,
     currentPosts: List<GridPost>,
     onDismiss: () -> Unit,
-    onAddAt: (Int) -> Unit,
+    onConfirm: (Int) -> Unit,
 ) {
     val context = LocalContext.current
-    var insertionIndex by remember(uri, currentPosts) { mutableIntStateOf(0) }
+    var insertionIndex by remember(pendingImport, currentPosts) { mutableIntStateOf(0) }
     var selectedCount by remember { mutableIntStateOf(9) }
     var currentAnalysis by remember { mutableStateOf<FeedAnalysisResult?>(null) }
     var projectedAnalysis by remember { mutableStateOf<FeedAnalysisResult?>(null) }
     var isAnalyzing by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    val maxInsertionIndex = minOf(currentPosts.size, 17)
+    val candidatePosts = remember(pendingImport) { pendingImport.toCandidatePosts() }
+    val candidateIds = remember(candidatePosts) { candidatePosts.map { it.id }.toSet() }
+    val maxInsertionIndex = currentPosts.size
     val safeIndex = insertionIndex.coerceIn(0, maxInsertionIndex)
-    val candidate = remember(uri) {
-        GridPost(
-            id = CandidatePostId,
-            kind = PostKind.Image,
-            uri = uri.toString(),
-        )
+    val proposedPosts = remember(currentPosts, safeIndex, candidatePosts) {
+        currentPosts.toMutableList().apply { addAll(safeIndex, candidatePosts) }
     }
-    val proposedPosts = remember(currentPosts, safeIndex, candidate) {
-        currentPosts.toMutableList().apply { add(safeIndex, candidate) }
-    }
-    val analysisCount = maxOf(selectedCount, safeIndex + 1).coerceAtMost(18)
+    val previewStartIndex = ((safeIndex / 3 - 1).coerceAtLeast(0)) * 3
+    val analysisCount = maxOf(selectedCount, safeIndex + candidatePosts.size)
     val analysisKey = currentPosts.joinToString(separator = "|") { post ->
         "${post.id}:${post.coverUri}:${post.placeholderColor}:${post.hidden}"
     }
 
-    LaunchedEffect(uri, safeIndex, analysisCount, analysisKey) {
+    LaunchedEffect(pendingImport, safeIndex, analysisCount, analysisKey) {
         isAnalyzing = true
         error = null
         runCatching {
@@ -120,8 +127,8 @@ fun CandidatePostPreviewDialog(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 CandidateGridPreview(
-                    posts = proposedPosts.take(9),
-                    candidateId = CandidatePostId,
+                    posts = proposedPosts.drop(previewStartIndex).take(9),
+                    candidateIds = candidateIds,
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -188,12 +195,13 @@ fun CandidatePostPreviewDialog(
                     projectedAnalysis != null -> CandidateImpactContent(
                         baseline = currentAnalysis,
                         projected = projectedAnalysis!!,
+                        candidateIds = candidateIds,
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onAddAt(safeIndex) }) {
+            TextButton(onClick = { onConfirm(safeIndex) }) {
                 LocalizedText("Aggiungi alla griglia")
             }
         },
@@ -208,7 +216,7 @@ fun CandidatePostPreviewDialog(
 @Composable
 private fun CandidateGridPreview(
     posts: List<GridPost>,
-    candidateId: String,
+    candidateIds: Set<String>,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         posts.chunked(3).forEach { row ->
@@ -217,7 +225,7 @@ private fun CandidateGridPreview(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 row.forEach { post ->
-                    val isCandidate = post.id == candidateId
+                    val isCandidate = post.id in candidateIds
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -267,8 +275,11 @@ private fun CandidateGridPreview(
 private fun CandidateImpactContent(
     baseline: FeedAnalysisResult?,
     projected: FeedAnalysisResult,
+    candidateIds: Set<String>,
 ) {
-    val candidateMetric = projected.metrics.firstOrNull { CandidatePostId in it.coveredPostIds }
+    val candidateMetric = projected.metrics.firstOrNull { metric ->
+        metric.coveredPostIds.any { it in candidateIds }
+    }
     val delta = projected.score.finalScore - (baseline?.score?.finalScore ?: projected.score.finalScore)
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
@@ -319,6 +330,37 @@ private fun CandidateImpactContent(
                     ) {}
                 }
             }
+        }
+    }
+}
+
+private fun PendingGridImport.toCandidatePosts(): List<GridPost> {
+    return when (type) {
+        PendingGridImportType.Post -> uris.take(1).map { uri ->
+            GridPost(
+                id = "$CandidatePostIdPrefix-0",
+                kind = PostKind.Image,
+                uri = uri.toString(),
+            )
+        }
+
+        PendingGridImportType.Carousel -> uris.takeIf { it.isNotEmpty() }?.let { media ->
+            listOf(
+                GridPost(
+                    id = "$CandidatePostIdPrefix-carousel",
+                    kind = PostKind.Image,
+                    uri = media.first().toString(),
+                    mediaUris = media.map { it.toString() },
+                ),
+            )
+        }.orEmpty()
+
+        PendingGridImportType.Mosaic -> uris.asReversed().mapIndexed { index, uri ->
+            GridPost(
+                id = "$CandidatePostIdPrefix-mosaic-$index",
+                kind = PostKind.Image,
+                uri = uri.toString(),
+            )
         }
     }
 }

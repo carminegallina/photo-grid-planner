@@ -51,16 +51,23 @@ class PlannerRepository(context: Context) {
     }
 
     suspend fun insertImage(uri: String, position: Int) {
+        insertImages(listOf(uri), position)
+    }
+
+    suspend fun insertImages(uris: List<String>, position: Int) {
+        if (uris.isEmpty()) return
         updateData { current ->
             val index = position.coerceIn(0, current.posts.size)
-            val newPost = GridPost(
-                id = UUID.randomUUID().toString(),
-                kind = PostKind.Image,
-                uri = uri,
-            )
+            val newPosts = uris.map { uri ->
+                GridPost(
+                    id = UUID.randomUUID().toString(),
+                    kind = PostKind.Image,
+                    uri = uri,
+                )
+            }
             current.copy(
                 posts = current.posts.toMutableList().apply {
-                    add(index, newPost)
+                    addAll(index, newPosts)
                 },
             )
         }
@@ -78,6 +85,24 @@ class PlannerRepository(context: Context) {
                         mediaUris = uris,
                     ),
                 ) + current.posts,
+            )
+        }
+    }
+
+    suspend fun insertCarousel(uris: List<String>, position: Int) {
+        if (uris.isEmpty()) return
+        updateData { current ->
+            val index = position.coerceIn(0, current.posts.size)
+            val carousel = GridPost(
+                id = UUID.randomUUID().toString(),
+                kind = PostKind.Image,
+                uri = uris.firstOrNull(),
+                mediaUris = uris,
+            )
+            current.copy(
+                posts = current.posts.toMutableList().apply {
+                    add(index, carousel)
+                },
             )
         }
     }
@@ -148,11 +173,6 @@ class PlannerRepository(context: Context) {
                             kind = PostKind.Image,
                             uri = uri,
                             mediaUris = emptyList(),
-                            status = when {
-                                post.scheduledDate != null -> PostStatus.Scheduled
-                                post.status == PostStatus.Published -> PostStatus.Idea
-                                else -> post.status
-                            },
                         )
                     } else {
                         post
@@ -164,20 +184,16 @@ class PlannerRepository(context: Context) {
 
     suspend fun setPostDetails(
         id: String,
-        caption: String,
-        hashtags: String,
-        notes: String,
-        status: PostStatus,
+        description: String,
+        tags: String,
     ) {
         updateData { current ->
             current.copy(
                 posts = current.posts.map { post ->
                     if (post.id == id) {
                         post.copy(
-                            caption = caption.trim().take(2_200),
-                            hashtags = hashtags.trim().take(1_200),
-                            notes = notes.trim().take(2_000),
-                            status = status,
+                            description = description.trim().take(2_200),
+                            tags = tags.trim().take(1_200),
                         )
                     } else {
                         post
@@ -384,6 +400,10 @@ class PlannerRepository(context: Context) {
         updateData { current -> current.copy(notificationsEnabled = enabled) }
     }
 
+    suspend fun setAnalyzeImports(enabled: Boolean) {
+        updateData { current -> current.copy(analyzeImports = enabled) }
+    }
+
     suspend fun setLanguage(language: AppLanguage) {
         updateData { current -> current.copy(language = language) }
     }
@@ -394,6 +414,7 @@ class PlannerRepository(context: Context) {
                 showTutorialOnLaunch = current.showTutorialOnLaunch,
                 initialPermissionPromptCompleted = current.initialPermissionPromptCompleted,
                 notificationsEnabled = current.notificationsEnabled,
+                analyzeImports = current.analyzeImports,
                 language = current.language,
             )
         }
@@ -425,6 +446,7 @@ class PlannerRepository(context: Context) {
             preferences[Keys.ShowTutorialOnLaunch] = next.showTutorialOnLaunch
             preferences[Keys.InitialPermissionPromptCompleted] = next.initialPermissionPromptCompleted
             preferences[Keys.NotificationsEnabled] = next.notificationsEnabled
+            preferences[Keys.AnalyzeImports] = next.analyzeImports
             preferences[Keys.AppLanguage] = next.language.name
             preferences[Keys.SavedLayoutsJson] = encodeSavedLayouts(next.savedLayouts)
             preferences[Keys.CalendarPlansJson] = encodeCalendarPlans(next.calendarPlans)
@@ -443,6 +465,7 @@ class PlannerRepository(context: Context) {
             showTutorialOnLaunch = this[Keys.ShowTutorialOnLaunch] ?: true,
             initialPermissionPromptCompleted = this[Keys.InitialPermissionPromptCompleted] ?: false,
             notificationsEnabled = this[Keys.NotificationsEnabled] ?: false,
+            analyzeImports = this[Keys.AnalyzeImports] ?: true,
             language = runCatching {
                 AppLanguage.valueOf(this[Keys.AppLanguage] ?: defaultAppLanguageForDevice().name)
             }.getOrDefault(defaultAppLanguageForDevice()),
@@ -461,6 +484,7 @@ class PlannerRepository(context: Context) {
             .put("showHiddenPosts", showHiddenPosts)
             .put("showTutorialOnLaunch", showTutorialOnLaunch)
             .put("notificationsEnabled", notificationsEnabled)
+            .put("analyzeImports", analyzeImports)
             .put("language", language.name)
             .put("savedLayouts", JSONArray(encodeSavedLayouts(savedLayouts)))
             .put("calendarPlans", JSONArray(encodeCalendarPlans(calendarPlans)))
@@ -479,6 +503,7 @@ class PlannerRepository(context: Context) {
             showHiddenPosts = optBoolean("showHiddenPosts", true),
             showTutorialOnLaunch = optBoolean("showTutorialOnLaunch", true),
             notificationsEnabled = optBoolean("notificationsEnabled", false),
+            analyzeImports = optBoolean("analyzeImports", true),
             language = language,
             savedLayouts = decodeSavedLayouts(optJSONArray("savedLayouts")?.toString().orEmpty()),
             calendarPlans = decodeCalendarPlans(optJSONArray("calendarPlans")?.toString().orEmpty()),
@@ -493,13 +518,6 @@ class PlannerRepository(context: Context) {
                 for (index in 0 until json.length()) {
                     val item = json.getJSONObject(index)
                     val scheduledDate = item.optString("scheduledDate").takeIf { it.isNotBlank() }
-                    val status = if (!item.has("status") && scheduledDate != null) {
-                        PostStatus.Scheduled
-                    } else {
-                        runCatching {
-                            PostStatus.valueOf(item.optString("status", PostStatus.Idea.name))
-                        }.getOrDefault(PostStatus.Idea)
-                    }
                     add(
                         GridPost(
                             id = item.getString("id"),
@@ -513,10 +531,10 @@ class PlannerRepository(context: Context) {
                             }.getOrDefault(PlaceholderType.Shot),
                             hidden = item.optBoolean("hidden", false),
                             scheduledDate = scheduledDate,
-                            caption = item.optString("caption"),
-                            hashtags = item.optString("hashtags"),
-                            notes = item.optString("notes"),
-                            status = status,
+                            description = item.optString("description")
+                                .ifBlank { item.optString("caption") },
+                            tags = item.optString("tags")
+                                .ifBlank { item.optString("hashtags") },
                             createdAt = item.optLong("createdAt", System.currentTimeMillis()),
                         ),
                     )
@@ -539,10 +557,8 @@ class PlannerRepository(context: Context) {
                     .put("placeholderType", post.placeholderType.name)
                     .put("hidden", post.hidden)
                     .put("scheduledDate", post.scheduledDate.orEmpty())
-                    .put("caption", post.caption)
-                    .put("hashtags", post.hashtags)
-                    .put("notes", post.notes)
-                    .put("status", post.status.name)
+                    .put("description", post.description)
+                    .put("tags", post.tags)
                     .put("createdAt", post.createdAt),
             )
         }
@@ -633,12 +649,7 @@ class PlannerRepository(context: Context) {
     }
 
     private fun GridPost.withSchedule(date: String?): GridPost {
-        val nextStatus = when {
-            date != null && status != PostStatus.Published -> PostStatus.Scheduled
-            date == null && status == PostStatus.Scheduled -> PostStatus.Ready
-            else -> status
-        }
-        return copy(scheduledDate = date, status = nextStatus)
+        return copy(scheduledDate = date)
     }
 
     private object Keys {
@@ -648,6 +659,7 @@ class PlannerRepository(context: Context) {
         val ShowTutorialOnLaunch = booleanPreferencesKey("show_tutorial_on_launch")
         val InitialPermissionPromptCompleted = booleanPreferencesKey("initial_permission_prompt_completed")
         val NotificationsEnabled = booleanPreferencesKey("notifications_enabled")
+        val AnalyzeImports = booleanPreferencesKey("analyze_imports")
         val AppLanguage = stringPreferencesKey("app_language")
         val SavedLayoutsJson = stringPreferencesKey("saved_layouts_json")
         val LegacySavedProfileLayoutsJson = stringPreferencesKey("saved_profile_layouts_json")

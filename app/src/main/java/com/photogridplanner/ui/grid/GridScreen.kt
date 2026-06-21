@@ -112,7 +112,8 @@ fun GridScreen(
     var editPlaceholderPost by remember { mutableStateOf<GridPost?>(null) }
     var placeholderActionsPost by remember { mutableStateOf<GridPost?>(null) }
     var replacePlaceholderId by remember { mutableStateOf<String?>(null) }
-    var candidateImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingCandidateImport by remember { mutableStateOf<PendingGridImport?>(null) }
+    var resumePreviewPostId by remember { mutableStateOf<String?>(null) }
     var showPhotoLibrary by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -153,7 +154,7 @@ fun GridScreen(
                         posts = state.visiblePosts,
                         aspectRatio = PreviewMode.Vertical.aspectRatio,
                         onReorderFinished = viewModel::setPostOrder,
-                        onOpen = { post -> detailsPostId = post.id },
+                        onOpen = { post -> previewPostId = post.id },
                         onToggleVisibility = { post -> viewModel.togglePostVisibility(post.id) },
                         onDelete = { post -> viewModel.deletePost(post.id) },
                         onPlaceholderClick = { post -> placeholderActionsPost = post },
@@ -194,7 +195,16 @@ fun GridScreen(
             } else {
                 when (uris.size) {
                     0 -> Unit
-                    1 -> candidateImportUri = uris.first()
+                    1 -> {
+                        if (state.analyzeImports) {
+                            pendingCandidateImport = PendingGridImport(
+                                uris = uris,
+                                type = PendingGridImportType.Post,
+                            )
+                        } else {
+                            viewModel.addImages(uris)
+                        }
+                    }
                     else -> pendingImportUris = uris
                 }
             }
@@ -204,30 +214,55 @@ fun GridScreen(
     val previewPost = previewPostId?.let { id ->
         state.posts.firstOrNull { it.id == id }
     }
-    previewPost?.allMediaUris?.takeIf { it.isNotEmpty() }?.let { uris ->
-        FullScreenPreview(uris = uris, onDismiss = { previewPostId = null })
+    previewPost?.takeIf { it.allMediaUris.isNotEmpty() }?.let { post ->
+        FullScreenPreview(
+            post = post,
+            onDismiss = { previewPostId = null },
+            onEdit = {
+                resumePreviewPostId = post.id
+                previewPostId = null
+                detailsPostId = post.id
+            },
+        )
     }
 
     val detailsPost = detailsPostId?.let { id -> state.posts.firstOrNull { it.id == id } }
     detailsPost?.let { post ->
         PostDetailsSheet(
             post = post,
-            onDismiss = { detailsPostId = null },
-            onSave = { caption, hashtags, notes, status ->
-                viewModel.setPostDetails(post.id, caption, hashtags, notes, status)
+            onDismiss = {
+                detailsPostId = null
+                previewPostId = resumePreviewPostId
+                resumePreviewPostId = null
             },
-            onOpenPreview = { previewPostId = post.id },
+            onSave = { description, tags ->
+                viewModel.setPostDetails(post.id, description, tags)
+            },
         )
     }
 
-    candidateImportUri?.let { uri ->
+    pendingCandidateImport?.let { pendingImport ->
         CandidatePostPreviewDialog(
-            uri = uri,
+            pendingImport = pendingImport,
             currentPosts = state.posts,
-            onDismiss = { candidateImportUri = null },
-            onAddAt = { position ->
-                viewModel.insertImage(uri, position)
-                candidateImportUri = null
+            onDismiss = { pendingCandidateImport = null },
+            onConfirm = { position ->
+                when (pendingImport.type) {
+                    PendingGridImportType.Post -> {
+                        pendingImport.uris.firstOrNull()?.let { uri ->
+                            viewModel.insertImage(uri, position)
+                        }
+                    }
+
+                    PendingGridImportType.Carousel -> {
+                        viewModel.insertCarousel(pendingImport.uris, position)
+                    }
+
+                    PendingGridImportType.Mosaic -> {
+                        viewModel.insertImages(pendingImport.uris.asReversed(), position)
+                    }
+                }
+                pendingCandidateImport = null
             },
         )
     }
@@ -237,14 +272,27 @@ fun GridScreen(
             count = pendingImportUris.size,
             onDismiss = { pendingImportUris = emptyList() },
             onMosaic = {
-                // The gallery presents generated mosaic tiles in publishing order.
-                // The grid itself shows the most recent post first, so reverse them here
-                // to rebuild the final profile composition immediately.
-                viewModel.addImages(pendingImportUris.reversed())
+                if (state.analyzeImports) {
+                    pendingCandidateImport = PendingGridImport(
+                        uris = pendingImportUris,
+                        type = PendingGridImportType.Mosaic,
+                    )
+                } else {
+                    // The gallery presents generated mosaic tiles in publishing order.
+                    // The grid itself shows the most recent post first, so reverse them here.
+                    viewModel.addImages(pendingImportUris.reversed())
+                }
                 pendingImportUris = emptyList()
             },
             onCarousel = {
-                viewModel.addCarousel(pendingImportUris)
+                if (state.analyzeImports) {
+                    pendingCandidateImport = PendingGridImport(
+                        uris = pendingImportUris,
+                        type = PendingGridImportType.Carousel,
+                    )
+                } else {
+                    viewModel.addCarousel(pendingImportUris)
+                }
                 pendingImportUris = emptyList()
             },
         )

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Send
@@ -31,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.photogridplanner.data.GridPost
 
 @Composable
 fun FullScreenPreview(
@@ -55,6 +58,38 @@ fun FullScreenPreview(
 fun FullScreenPreview(
     uris: List<String>,
     onDismiss: () -> Unit,
+) {
+    PostPreviewDialog(
+        uris = uris,
+        description = "",
+        tags = "",
+        onDismiss = onDismiss,
+        onEdit = null,
+    )
+}
+
+@Composable
+fun FullScreenPreview(
+    post: GridPost,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    PostPreviewDialog(
+        uris = post.allMediaUris,
+        description = post.description,
+        tags = post.tags,
+        onDismiss = onDismiss,
+        onEdit = onEdit,
+    )
+}
+
+@Composable
+private fun PostPreviewDialog(
+    uris: List<String>,
+    description: String,
+    tags: String,
+    onDismiss: () -> Unit,
+    onEdit: (() -> Unit)?,
 ) {
     if (uris.isEmpty()) return
 
@@ -107,14 +142,24 @@ fun FullScreenPreview(
                             color = Color.White.copy(alpha = 0.68f),
                         )
                     }
-                    Icon(
-                        imageVector = Icons.Rounded.MoreHoriz,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.86f),
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(24.dp),
-                    )
+                    if (onEdit == null) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreHoriz,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.86f),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(24.dp),
+                        )
+                    } else {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                imageVector = Icons.Rounded.Edit,
+                                contentDescription = strings.t("Modifica info"),
+                                tint = Color.White.copy(alpha = 0.90f),
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -213,16 +258,31 @@ fun FullScreenPreview(
                             modifier = Modifier.size(27.dp),
                         )
                     }
-                    LocalizedText(
-                        text = "photo.grid  Anteprima post del layout. Qui controlli continuita, tagli e caroselli prima di pubblicare.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
-                    )
-                    LocalizedText(
-                        text = "Visualizzazione locale, nessuna connessione a Instagram.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.58f),
-                    )
+                    if (description.isNotBlank()) {
+                        LocalizedText(
+                            text = "photo.grid  ${description.trim()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
+                        )
+                    }
+                    if (tags.isNotBlank()) {
+                        LocalizedText(
+                            text = tags.trim(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    onEdit?.let { edit ->
+                        TextButton(onClick = edit) {
+                            Icon(
+                                imageVector = Icons.Rounded.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp),
+                            )
+                            Spacer(Modifier.width(7.dp))
+                            LocalizedText("Modifica info")
+                        }
+                    }
                 }
             }
         }

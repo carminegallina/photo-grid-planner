@@ -19,13 +19,6 @@ enum class PostKind {
     Placeholder,
 }
 
-enum class PostStatus(val label: String) {
-    Idea("Idea"),
-    Ready("Pronto"),
-    Scheduled("Programmato"),
-    Published("Pubblicato"),
-}
-
 enum class PlaceholderType(val label: String, val shortLabel: String) {
     Shot("Post", "Post"),
     Mosaic("Mosaico", "Mosaico"),
@@ -63,10 +56,8 @@ data class GridPost(
     val placeholderType: PlaceholderType = PlaceholderType.Shot,
     val hidden: Boolean = false,
     val scheduledDate: String? = null,
-    val caption: String = "",
-    val hashtags: String = "",
-    val notes: String = "",
-    val status: PostStatus = PostStatus.Idea,
+    val description: String = "",
+    val tags: String = "",
     val createdAt: Long = System.currentTimeMillis(),
 ) {
     val allMediaUris: List<String>
@@ -86,7 +77,7 @@ data class GridPost(
         get() = placeholderLabel.ifBlank { placeholderType.label }
 
     val publishingText: String
-        get() = listOf(caption.trim(), hashtags.trim())
+        get() = listOf(description.trim(), tags.trim())
             .filter { it.isNotBlank() }
             .joinToString(separator = "\n\n")
 }
@@ -115,6 +106,7 @@ data class PlannerData(
     val showTutorialOnLaunch: Boolean = true,
     val initialPermissionPromptCompleted: Boolean = false,
     val notificationsEnabled: Boolean = false,
+    val analyzeImports: Boolean = true,
     val language: AppLanguage = defaultAppLanguageForDevice(),
     val savedLayouts: List<SavedLayout> = emptyList(),
     val calendarPlans: List<CalendarDayPlan> = emptyList(),

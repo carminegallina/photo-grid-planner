@@ -612,6 +612,21 @@ private val EnglishStrings = mapOf(
     "Aggiungi alla griglia" to "Add to grid",
     "Feed Score previsto" to "Projected Feed Score",
     "Palette prevista" to "Projected palette",
+    "Importazione" to "Import",
+    "Analizza prima di aggiungere" to "Analyze before adding",
+    "Mostra l'impatto su griglia, Feed Score, luce e palette prima di importare post, caroselli o mosaici." to
+        "Show the impact on the grid, Feed Score, light and palette before importing posts, carousels or mosaics.",
+    "Descrizione" to "Caption",
+    "Tag" to "Tags",
+    "Aggiungi @utenti, collaboratori o hashtag." to "Add @users, collaborators or hashtags.",
+    "Copia descrizione" to "Copy caption",
+    "Copia tag" to "Copy tags",
+    "Tag copiati" to "Tags copied",
+    "Modifica post" to "Edit post",
+    "Modifica carosello" to "Edit carousel",
+    "Queste informazioni appariranno nell'anteprima del post." to
+        "This information will appear in the post preview.",
+    "Modifica info" to "Edit details",
 )
 
 @Composable

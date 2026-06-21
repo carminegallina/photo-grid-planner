@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
@@ -197,6 +198,32 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setShowHiddenPosts,
                 )
             }
+        }
+
+        SettingsPanel(title = "Importazione") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Rounded.Analytics, contentDescription = null)
+                    LocalizedText("Analizza prima di aggiungere")
+                }
+                Switch(
+                    checked = state.analyzeImports,
+                    onCheckedChange = viewModel::setAnalyzeImports,
+                )
+            }
+            LocalizedText(
+                text = "Mostra l'impatto su griglia, Feed Score, luce e palette prima di importare post, caroselli o mosaici.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         SettingsPanel(title = "Notifiche") {
