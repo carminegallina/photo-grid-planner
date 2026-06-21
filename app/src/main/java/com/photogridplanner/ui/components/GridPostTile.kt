@@ -1,5 +1,6 @@
 package com.photogridplanner.ui.components
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.LocalizedText
 
 import androidx.compose.animation.AnimatedVisibility
@@ -36,6 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.photogridplanner.data.GridPost
 import com.photogridplanner.data.PostKind
@@ -51,9 +56,28 @@ fun GridPostTile(
     onDelete: () -> Unit,
     onPlaceholderClick: () -> Unit = {},
 ) {
+    val strings = LocalAppStrings.current
+    val tileDescription = buildString {
+        append(
+            when (post.kind) {
+                PostKind.Image -> if (post.isCarousel) {
+                    "${strings.t("Carosello")}, ${post.allMediaUris.size} ${strings.t("Foto").lowercase()}"
+                } else {
+                    strings.t("Post")
+                }
+
+                PostKind.Placeholder -> "${strings.t("Placeholder")}: ${post.placeholderDisplayLabel}"
+            },
+        )
+        if (post.hidden) append(", ${strings.t("Nascosto")}")
+    }
     Box(
         modifier = modifier
             .background(Color.Black)
+            .semantics {
+                contentDescription = tileDescription
+                role = Role.Button
+            }
             .clickable(
                 enabled = post.kind == PostKind.Placeholder || post.coverUri != null,
                 onClick = {

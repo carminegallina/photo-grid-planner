@@ -74,6 +74,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -181,6 +183,10 @@ fun GridScreen(
         maxSelection = if (replacePlaceholderId == null) 80 else 1,
         title = if (replacePlaceholderId == null) "Importa nella griglia" else "Sostituisci placeholder",
         usedMediaUris = state.posts.flatMap { post -> post.allMediaUris }.toSet(),
+        scheduledMediaUris = state.posts
+            .filter { post -> !post.scheduledDate.isNullOrBlank() }
+            .flatMap { post -> post.allMediaUris }
+            .toSet(),
         onDismiss = {
             showPhotoLibrary = false
             replacePlaceholderId = null
@@ -1396,6 +1402,7 @@ private fun ReorderableGrid(
     modifier: Modifier = Modifier,
 ) {
     val touchSlop = LocalViewConfiguration.current.touchSlop
+    val hapticFeedback = LocalHapticFeedback.current
     val boundsById = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
     var displayedPosts by remember { mutableStateOf(posts) }
     var draggedId by remember { mutableStateOf<String?>(null) }
@@ -1467,6 +1474,7 @@ private fun ReorderableGrid(
                         .pointerInput(post.id, posts) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                     draggedId = post.id
                                     dragStartCenter = boundsById[post.id]?.center ?: Offset.Zero
                                     dragCenter = dragStartCenter
@@ -1509,10 +1517,14 @@ private fun ReorderableGrid(
                                             boundsById[candidate.id]?.contains(dragCenter) == true
                                     } ?: return@detectDragGesturesAfterLongPress
 
-                                    displayedPosts = displayedPosts.moveItem(
+                                    val reorderedPosts = displayedPosts.moveItem(
                                         fromIndex = displayedPosts.indexOfFirst { it.id == post.id },
                                         toIndex = displayedPosts.indexOfFirst { it.id == target.id },
                                     )
+                                    if (reorderedPosts !== displayedPosts) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        displayedPosts = reorderedPosts
+                                    }
                                 },
                             )
                         },

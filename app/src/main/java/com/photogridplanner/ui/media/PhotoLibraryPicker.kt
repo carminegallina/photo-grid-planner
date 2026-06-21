@@ -1,5 +1,6 @@
 package com.photogridplanner.ui.media
 
+import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.LocalizedText
 
 import android.Manifest
@@ -20,6 +21,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -37,11 +39,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items as lazyItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PhotoLibrary
@@ -66,11 +72,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -91,6 +105,7 @@ private data class PhotoAsset(
     val albumId: String,
     val albumName: String,
     val takenAtMillis: Long,
+    val isGenerated: Boolean = false,
 )
 
 private data class PhotoAlbum(
@@ -103,6 +118,14 @@ private data class PhotoAlbum(
 private enum class PhotoLibrarySection {
     AllPhotos,
     Albums,
+}
+
+private enum class PhotoLibraryFilter(val label: String) {
+    All("Tutte"),
+    Available("Disponibili"),
+    InGrid("Nella griglia"),
+    Scheduled("Pianificate"),
+    Created("Creazioni app"),
 }
 
 private const val GeneratedAlbumId = "photogridplanner_generated"
@@ -120,6 +143,7 @@ fun PhotoLibraryPicker(
     maxSelection: Int = 80,
     title: String = "Libreria foto",
     usedMediaUris: Set<String> = emptySet(),
+    scheduledMediaUris: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onPhotosSelected: (List<Uri>) -> Unit,
 ) {
@@ -131,6 +155,7 @@ fun PhotoLibraryPicker(
     var refreshKey by remember { mutableIntStateOf(0) }
     var photos by remember { mutableStateOf<List<PhotoAsset>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
+    var loadFailed by remember { mutableStateOf(false) }
     var selected by remember(mode) { mutableStateOf<List<Uri>>(emptyList()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -157,12 +182,18 @@ fun PhotoLibraryPicker(
     LaunchedEffect(accessState, refreshKey) {
         if (accessState.hasAccess) {
             loading = true
-            photos = withContext(Dispatchers.IO) {
-                queryDeviceImages(context)
-            }
+            loadFailed = false
+            photos = runCatching {
+                withContext(Dispatchers.IO) {
+                    queryDeviceImages(context)
+                }
+            }.onFailure {
+                loadFailed = true
+            }.getOrDefault(emptyList())
             loading = false
         } else {
             photos = emptyList()
+            loadFailed = false
         }
     }
 
@@ -195,6 +226,9 @@ fun PhotoLibraryPicker(
                         mode = mode,
                         maxSelection = maxSelection,
                         usedMediaUris = usedMediaUris,
+                        scheduledMediaUris = scheduledMediaUris,
+                        loadFailed = loadFailed,
+                        onRetryLoad = { refreshKey++ },
                         onManageAccess = {
                             selected = emptyList()
                             requestPhotoAccess()
@@ -267,6 +301,9 @@ private fun PhotoLibraryContent(
     mode: PhotoSelectionMode,
     maxSelection: Int,
     usedMediaUris: Set<String>,
+    scheduledMediaUris: Set<String>,
+    loadFailed: Boolean,
+    onRetryLoad: () -> Unit,
     onManageAccess: () -> Unit,
     onTogglePhoto: (Uri) -> Unit,
     onAddToSelection: (List<Uri>) -> Unit,
@@ -274,9 +311,23 @@ private fun PhotoLibraryContent(
     val density = LocalDensity.current
     var cellSizePx by remember { mutableIntStateOf(0) }
     val cellStridePx = cellSizePx + with(density) { 6.dp.toPx() }
-    val albums = remember(photos) { buildPhotoAlbums(photos) }
     var librarySection by remember { mutableStateOf(PhotoLibrarySection.AllPhotos) }
+    var photoFilter by remember { mutableStateOf(PhotoLibraryFilter.All) }
     var selectedAlbumId by remember { mutableStateOf<String?>(null) }
+
+    val filteredPhotos = remember(photos, photoFilter, usedMediaUris, scheduledMediaUris) {
+        photos.filter { photo ->
+            val uri = photo.uri.toString()
+            when (photoFilter) {
+                PhotoLibraryFilter.All -> true
+                PhotoLibraryFilter.Available -> uri !in usedMediaUris
+                PhotoLibraryFilter.InGrid -> uri in usedMediaUris
+                PhotoLibraryFilter.Scheduled -> uri in scheduledMediaUris
+                PhotoLibraryFilter.Created -> photo.isGenerated
+            }
+        }
+    }
+    val albums = remember(filteredPhotos) { buildPhotoAlbums(filteredPhotos) }
 
     LaunchedEffect(albums) {
         if (selectedAlbumId != null && albums.none { it.id == selectedAlbumId }) {
@@ -363,8 +414,10 @@ private fun PhotoLibraryContent(
                     .height(320.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                PhotoLibraryLoading()
             }
+
+            loadFailed -> PhotoLibraryLoadFailed(onRetry = onRetryLoad)
 
             photos.isEmpty() -> EmptyPhotoLibrary()
 
@@ -381,16 +434,28 @@ private fun PhotoLibraryContent(
                     },
                 )
 
+                PhotoLibraryFilterChips(
+                    selected = photoFilter,
+                    onSelected = { photoFilter = it },
+                )
+
                 if (librarySection == PhotoLibrarySection.Albums && selectedAlbumId == null) {
-                    AlbumGrid(
-                        albums = albums,
-                        onAlbumSelected = { selectedAlbumId = it },
-                    )
+                    if (albums.isEmpty()) {
+                        EmptyFilteredPhotoLibrary(
+                            filter = photoFilter,
+                            onClearFilter = { photoFilter = PhotoLibraryFilter.All },
+                        )
+                    } else {
+                        AlbumGrid(
+                            albums = albums,
+                            onAlbumSelected = { selectedAlbumId = it },
+                        )
+                    }
                 } else {
                     val visiblePhotos = selectedAlbumId?.let { albumId ->
-                        photos.filter { it.albumId == albumId }
+                        filteredPhotos.filter { it.albumId == albumId }
                     }.orEmpty().ifEmpty {
-                        if (selectedAlbumId == null) photos else emptyList()
+                        if (selectedAlbumId == null) filteredPhotos else emptyList()
                     }
                     val selectedAlbum = albums.firstOrNull { it.id == selectedAlbumId }
 
@@ -405,37 +470,46 @@ private fun PhotoLibraryContent(
                         )
                     }
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(PhotoGridColumns),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 280.dp, max = 440.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(
-                            items = visiblePhotos,
-                            key = { it.id },
-                        ) { photo ->
-                            val index = visiblePhotos.indexOf(photo)
-                            val isSelected = photo.uri in selected
-                            PhotoCell(
-                                photo = photo,
-                                index = index,
-                                photoCount = visiblePhotos.size,
-                            selected = isSelected,
-                            alreadyInGrid = photo.uri.toString() in usedMediaUris,
-                                dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
-                                cellStridePx = cellStridePx,
-                                onCellSizeChanged = { size -> cellSizePx = size },
-                                onClick = { onTogglePhoto(photo.uri) },
-                                onAddToSelection = { onAddToSelection(listOf(photo.uri)) },
-                                onDragSelect = { targetIndex ->
-                                    onAddToSelection(
-                                        photosInSelectionRectangle(visiblePhotos, index, targetIndex),
-                                    )
-                                },
-                            )
+                    if (visiblePhotos.isEmpty()) {
+                        EmptyFilteredPhotoLibrary(
+                            filter = photoFilter,
+                            onClearFilter = { photoFilter = PhotoLibraryFilter.All },
+                        )
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(PhotoGridColumns),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 280.dp, max = 440.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items(
+                                items = visiblePhotos,
+                                key = { it.id },
+                            ) { photo ->
+                                val index = visiblePhotos.indexOf(photo)
+                                val isSelected = photo.uri in selected
+                                val photoUri = photo.uri.toString()
+                                PhotoCell(
+                                    photo = photo,
+                                    index = index,
+                                    photoCount = visiblePhotos.size,
+                                    selected = isSelected,
+                                    alreadyInGrid = photoUri in usedMediaUris,
+                                    isScheduled = photoUri in scheduledMediaUris,
+                                    dragSelectionEnabled = mode == PhotoSelectionMode.Multiple,
+                                    cellStridePx = cellStridePx,
+                                    onCellSizeChanged = { size -> cellSizePx = size },
+                                    onClick = { onTogglePhoto(photo.uri) },
+                                    onAddToSelection = { onAddToSelection(listOf(photo.uri)) },
+                                    onDragSelect = { targetIndex ->
+                                        onAddToSelection(
+                                            photosInSelectionRectangle(visiblePhotos, index, targetIndex),
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -451,6 +525,7 @@ private fun PhotoCell(
     photoCount: Int,
     selected: Boolean,
     alreadyInGrid: Boolean,
+    isScheduled: Boolean,
     dragSelectionEnabled: Boolean,
     cellStridePx: Float,
     onCellSizeChanged: (Int) -> Unit,
@@ -462,6 +537,20 @@ private fun PhotoCell(
     val startRow = index / PhotoGridColumns
     val currentAddToSelection by rememberUpdatedState(onAddToSelection)
     val currentDragSelect by rememberUpdatedState(onDragSelect)
+    val hapticFeedback = LocalHapticFeedback.current
+    val strings = LocalAppStrings.current
+    val selectedScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (selected) 0.94f else 1f,
+        animationSpec = tween(160, easing = FastOutSlowInEasing),
+        label = "photo_cell_selection_scale",
+    )
+    val photoDescription = buildString {
+        append(strings.t("Foto"))
+        if (alreadyInGrid) append(", ${strings.t("Nella griglia")}")
+        if (isScheduled) append(", ${strings.t("Pianificata")}")
+        if (photo.isGenerated) append(", ${strings.t("Creata con l'app")}")
+        if (selected) append(", ${strings.t("Selezionata")}")
+    }
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -469,12 +558,29 @@ private fun PhotoCell(
                 if (size.width > 0) onCellSizeChanged(size.width)
             }
             .clip(RoundedCornerShape(8.dp))
+            .border(
+                width = if (selected) 2.dp else 0.dp,
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .graphicsLayer {
+                scaleX = selectedScale
+                scaleY = selectedScale
+            }
+            .semantics {
+                contentDescription = photoDescription
+                role = Role.Button
+                this.selected = selected
+            }
             // Long press starts additive selection; dragging across tiles keeps adding them.
             .then(
                 if (dragSelectionEnabled) {
                     Modifier.pointerInput(index, photoCount, cellStridePx) {
                         detectDragGesturesAfterLongPress(
-                            onDragStart = { currentAddToSelection() },
+                            onDragStart = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                currentAddToSelection()
+                            },
                             onDrag = { change, _ ->
                                 change.consume()
                                 if (cellStridePx <= 0f) return@detectDragGesturesAfterLongPress
@@ -496,7 +602,12 @@ private fun PhotoCell(
                     Modifier
                 },
             )
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+            ),
     ) {
         AsyncUriImage(
             uri = photo.uri.toString(),
@@ -504,20 +615,28 @@ private fun PhotoCell(
             maxSize = 480,
             modifier = Modifier.fillMaxSize(),
         )
-        if (alreadyInGrid) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(6.dp)
-                    .size(24.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.ViewModule,
-                    contentDescription = null,
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (alreadyInGrid) {
+                PhotoStatusBadge(
+                    icon = Icons.Rounded.ViewModule,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(5.dp),
+                )
+            }
+            if (isScheduled) {
+                PhotoStatusBadge(
+                    icon = Icons.Rounded.Event,
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            if (photo.isGenerated) {
+                PhotoStatusBadge(
+                    icon = Icons.Rounded.ContentCut,
+                    tint = MaterialTheme.colorScheme.tertiary,
                 )
             }
         }
@@ -538,6 +657,25 @@ private fun PhotoCell(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PhotoStatusBadge(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: androidx.compose.ui.graphics.Color,
+) {
+    Surface(
+        modifier = Modifier.size(24.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.padding(5.dp),
+        )
     }
 }
 
@@ -574,6 +712,25 @@ private fun PhotoLibrarySectionTabs(
                 )
             },
         )
+    }
+}
+
+@Composable
+private fun PhotoLibraryFilterChips(
+    selected: PhotoLibraryFilter,
+    onSelected: (PhotoLibraryFilter) -> Unit,
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        lazyItems(
+            items = PhotoLibraryFilter.entries,
+            key = { it.name },
+        ) { filter ->
+            FilterChip(
+                selected = selected == filter,
+                onClick = { onSelected(filter) },
+                label = { LocalizedText(filter.label) },
+            )
+        }
     }
 }
 
@@ -674,6 +831,95 @@ private fun EmptyPhotoLibrary() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+@Composable
+private fun EmptyFilteredPhotoLibrary(
+    filter: PhotoLibraryFilter,
+    onClearFilter: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Collections,
+            contentDescription = null,
+            modifier = Modifier.size(42.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.size(12.dp))
+        LocalizedText(
+            text = "Nessuna foto corrisponde a questo filtro",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        LocalizedText(
+            text = filter.label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (filter != PhotoLibraryFilter.All) {
+            Spacer(Modifier.size(12.dp))
+            OutlinedButton(onClick = onClearFilter) {
+                LocalizedText("Mostra tutte")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoLibraryLoading() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        CircularProgressIndicator()
+        LocalizedText(
+            text = "Carico libreria...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PhotoLibraryLoadFailed(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(42.dp),
+            tint = MaterialTheme.colorScheme.tertiary,
+        )
+        Spacer(Modifier.size(12.dp))
+        LocalizedText(
+            text = "Impossibile leggere la libreria foto",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        LocalizedText(
+            text = "Controlla l'accesso alle foto e riprova.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.size(12.dp))
+        OutlinedButton(onClick = onRetry) {
+            LocalizedText("Riprova")
+        }
     }
 }
 
@@ -789,7 +1035,9 @@ private suspend fun queryDeviceImages(context: Context): List<PhotoAsset> {
     // Android can filter MediaStore results after a partial permission grant. Locally-created
     // cuts are remembered separately so they remain available to this app in that situation.
     val visibleUris = devicePhotos.associateBy { it.uri.toString() }
-    val generatedPhotos = GeneratedMediaRegistry.read(context).map { record ->
+    val generatedRecords = GeneratedMediaRegistry.read(context)
+    val generatedUris = generatedRecords.mapTo(mutableSetOf()) { it.uri.toString() }
+    val generatedPhotos = generatedRecords.map { record ->
         visibleUris[record.uri.toString()]
             ?: queryPhotoByUri(context, record.uri)
             ?: PhotoAsset(
@@ -798,11 +1046,19 @@ private suspend fun queryDeviceImages(context: Context): List<PhotoAsset> {
                 albumId = GeneratedAlbumId,
                 albumName = GeneratedAlbumName,
                 takenAtMillis = record.createdAt,
+                isGenerated = true,
             )
     }
 
     return (generatedPhotos + devicePhotos)
         .distinctBy { it.uri }
+        .map { photo ->
+            photo.copy(
+                isGenerated = photo.isGenerated ||
+                    photo.uri.toString() in generatedUris ||
+                    photo.albumName == GeneratedAlbumName,
+            )
+        }
         .sortedByDescending { it.takenAtMillis }
 }
 
