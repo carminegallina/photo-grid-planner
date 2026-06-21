@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PhotoGridPlanner"
+rootProject.name = "NiwLayrCreatorStudio"
 include(":app")

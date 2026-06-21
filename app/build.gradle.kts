@@ -32,15 +32,15 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "com.photogridplanner"
+    namespace = "com.niwlayr.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.photogridplanner"
+        applicationId = "com.niwlayr.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "1.5.28-beta"
+        versionCode = 46
+        versionName = "1.5.29-beta"
     }
 
     buildFeatures {
