@@ -2,6 +2,7 @@ package com.photogridplanner.ui.media
 
 import com.photogridplanner.ui.i18n.LocalAppStrings
 import com.photogridplanner.ui.i18n.LocalizedText
+import com.photogridplanner.media.hasFullImageLibraryAccess
 
 import android.Manifest
 import android.content.ContentUris
@@ -128,7 +129,6 @@ private enum class PhotoLibraryFilter(val label: String) {
     Created("Creazioni app"),
 }
 
-private const val GeneratedAlbumId = "photogridplanner_generated"
 private const val GeneratedAlbumName = "Photo Grid Planner"
 
 private data class PhotoAccessState(
@@ -1032,22 +1032,23 @@ private suspend fun queryDeviceImages(context: Context): List<PhotoAsset> {
         }
     }.orEmpty()
 
-    // Android can filter MediaStore results after a partial permission grant. Locally-created
-    // cuts are remembered separately so they remain available to this app in that situation.
+    // Android can filter MediaStore results after a partial permission grant. Generated items
+    // are queried by URI too, but stale records are never rendered as broken thumbnail shells.
     val visibleUris = devicePhotos.associateBy { it.uri.toString() }
     val generatedRecords = GeneratedMediaRegistry.read(context)
     val generatedUris = generatedRecords.mapTo(mutableSetOf()) { it.uri.toString() }
-    val generatedPhotos = generatedRecords.map { record ->
+    val missingGeneratedUris = mutableListOf<Uri>()
+    val canPruneGenerated = context.hasFullImageLibraryAccess()
+    val generatedPhotos = generatedRecords.mapNotNull { record ->
         visibleUris[record.uri.toString()]
             ?: queryPhotoByUri(context, record.uri)
-            ?: PhotoAsset(
-                id = record.uri.toString(),
-                uri = record.uri,
-                albumId = GeneratedAlbumId,
-                albumName = GeneratedAlbumName,
-                takenAtMillis = record.createdAt,
-                isGenerated = true,
-            )
+            ?: run {
+                if (canPruneGenerated) missingGeneratedUris += record.uri
+                null
+            }
+    }
+    if (missingGeneratedUris.isNotEmpty()) {
+        GeneratedMediaRegistry.forget(context, missingGeneratedUris)
     }
 
     return (generatedPhotos + devicePhotos)

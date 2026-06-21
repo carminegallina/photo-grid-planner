@@ -209,6 +209,44 @@ class PlannerRepository(context: Context) {
         }
     }
 
+    /**
+     * Removes posts whose backing media was deleted from the device. Saved layouts are pruned
+     * at the same time so reopening a layout cannot bring a broken image back into the app.
+     */
+    suspend fun removePostsReferencingMedia(missingUris: Collection<String>) {
+        val missing = missingUris.toSet()
+        if (missing.isEmpty()) return
+
+        updateData { current ->
+            val removedIds = current.posts
+                .filter { post -> post.allMediaUris.any { uri -> uri in missing } }
+                .mapTo(mutableSetOf()) { post -> post.id }
+            if (removedIds.isEmpty()) return@updateData current
+
+            val remainingLayouts = current.savedLayouts.mapNotNull { layout ->
+                if (layout.posts.isNotEmpty()) {
+                    val remainingPosts = layout.posts.filterNot { post ->
+                        post.allMediaUris.any { uri -> uri in missing }
+                    }
+                    val remainingPostIds = layout.postIds.filterNot { it in removedIds }
+                    if (remainingPosts.isEmpty()) {
+                        null
+                    } else {
+                        layout.copy(posts = remainingPosts, postIds = remainingPostIds)
+                    }
+                } else {
+                    val remainingPostIds = layout.postIds.filterNot { it in removedIds }
+                    if (remainingPostIds.isEmpty()) null else layout.copy(postIds = remainingPostIds)
+                }
+            }
+
+            current.copy(
+                posts = current.posts.filterNot { it.id in removedIds },
+                savedLayouts = remainingLayouts,
+            )
+        }
+    }
+
     suspend fun togglePostVisibility(id: String) {
         updateData { current ->
             current.copy(

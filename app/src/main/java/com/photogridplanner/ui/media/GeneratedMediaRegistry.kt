@@ -43,6 +43,17 @@ object GeneratedMediaRegistry {
         return decode(context.generatedMediaDataStore.data.first()[GeneratedMediaKey])
     }
 
+    /** Removes records for cuts that were deleted outside the app. */
+    suspend fun forget(context: Context, uris: Collection<Uri>) {
+        if (uris.isEmpty()) return
+        val removed = uris.mapTo(mutableSetOf()) { it.toString() }
+        context.generatedMediaDataStore.edit { preferences ->
+            val remaining = decode(preferences[GeneratedMediaKey])
+                .filterNot { record -> record.uri.toString() in removed }
+            preferences[GeneratedMediaKey] = encode(remaining)
+        }
+    }
+
     private fun encode(records: List<GeneratedMediaRecord>): String {
         return JSONArray().apply {
             records.forEach { record ->

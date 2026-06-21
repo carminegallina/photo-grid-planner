@@ -13,8 +13,12 @@ import com.photogridplanner.data.PlannerRepository
 import com.photogridplanner.data.PlaceholderType
 import com.photogridplanner.data.PostKind
 import com.photogridplanner.data.PreviewMode
+import com.photogridplanner.media.hasFullImageLibraryAccess
+import com.photogridplanner.media.mediaUriExists
 import com.photogridplanner.notifications.PublicationReminderScheduler
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -23,19 +27,26 @@ import kotlinx.coroutines.launch
 class PlannerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = PlannerRepository(application.applicationContext)
 
-    init {
-        viewModelScope.launch {
-            repository.data.collect { data ->
-                PublicationReminderScheduler.sync(application.applicationContext, data)
-            }
-        }
-    }
-
     val state: StateFlow<PlannerData> = repository.data.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
         initialValue = PlannerData(showTutorialOnLaunch = false),
     )
+
+    private var mediaCleanupJob: Job? = null
+    private var initialMediaCleanupChecked = false
+
+    init {
+        viewModelScope.launch {
+            repository.data.collect { data ->
+                PublicationReminderScheduler.sync(application.applicationContext, data)
+                if (!initialMediaCleanupChecked) {
+                    initialMediaCleanupChecked = true
+                    removeDeletedMedia(data)
+                }
+            }
+        }
+    }
 
     fun addImages(uris: List<Uri>) {
         persistReadAccess(uris)
@@ -160,6 +171,11 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch { repository.setLanguage(language) }
     }
 
+    /** Checks the device library on launch/resume and removes posts whose file was deleted. */
+    fun removeDeletedMedia() {
+        removeDeletedMedia(state.value)
+    }
+
     fun resetProject() {
         viewModelScope.launch { repository.reset() }
     }
@@ -254,6 +270,26 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 if (state.value.language == AppLanguage.English) "Grid order" else "Ordine griglia",
             )
             .putExtra(Intent.EXTRA_TEXT, text)
+    }
+
+    private fun removeDeletedMedia(data: PlannerData) {
+        val context = getApplication<Application>().applicationContext
+        if (!context.hasFullImageLibraryAccess() || mediaCleanupJob?.isActive == true) return
+
+        val mediaUris = data.posts
+            .flatMap { post -> post.allMediaUris }
+            .filter { uri -> uri.isNotBlank() }
+            .distinct()
+        if (mediaUris.isEmpty()) return
+
+        mediaCleanupJob = viewModelScope.launch(Dispatchers.IO) {
+            val missingUris = mediaUris.filter { rawUri ->
+                !context.mediaUriExists(Uri.parse(rawUri))
+            }
+            if (missingUris.isNotEmpty()) {
+                repository.removePostsReferencingMedia(missingUris)
+            }
+        }
     }
 
     private fun persistReadAccess(uris: List<Uri>) {
