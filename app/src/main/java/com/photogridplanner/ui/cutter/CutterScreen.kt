@@ -565,6 +565,7 @@ fun CutterScreen(modifier: Modifier = Modifier) {
                                 frame = frame,
                                 namePrefix = "mosaic",
                                 exportOrder = CutExportOrder.ProfilePublish,
+                                preserveGallerySelectionOrder = true,
                                 doneMessage = { "Creati $it tasselli." },
                             )
                         },
