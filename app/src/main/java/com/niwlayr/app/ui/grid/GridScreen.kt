@@ -68,7 +68,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.niwlayr.app.ui.theme.DisplayFamily
+import com.niwlayr.app.ui.theme.MonoFamily
+import com.niwlayr.app.ui.theme.SpectrumStops
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -559,14 +563,14 @@ private fun ProfilePreviewHeaderModern(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.86f),
                 border = BorderStroke(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.44f),
+                    width = 2.5.dp,
+                    brush = Brush.sweepGradient(SpectrumStops + SpectrumStops.first()),
                 ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     LocalizedText(
                         text = "PG",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -694,14 +698,14 @@ private fun ProfilePreviewHeader(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        width = 2.5.dp,
+                        brush = Brush.sweepGradient(SpectrumStops + SpectrumStops.first()),
                     ),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         LocalizedText(
                             text = "PG",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -831,7 +835,7 @@ private fun ProfileStat(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         LocalizedText(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = MonoFamily),
             color = MaterialTheme.colorScheme.onBackground,
         )
         LocalizedText(
