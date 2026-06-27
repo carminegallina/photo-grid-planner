@@ -52,6 +52,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.niwlayr.app.ui.components.SpectrumRule
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -301,6 +302,7 @@ private fun CalendarHeader() {
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
+        SpectrumRule(modifier = Modifier.padding(vertical = 2.dp))
         LocalizedText(
             text = "Organizza i post e apri ogni giorno per anteprima ed export.",
             style = MaterialTheme.typography.bodyMedium,

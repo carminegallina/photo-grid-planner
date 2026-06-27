@@ -42,6 +42,8 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import com.niwlayr.app.ui.components.SpectrumRule
+import com.niwlayr.app.ui.theme.MonoFamily
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -489,10 +491,13 @@ fun CutterScreen(modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        LocalizedText(
-            text = "Cutter",
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LocalizedText(
+                text = "Cutter",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            SpectrumRule()
+        }
 
         ModeTabs(
             mode = mode,
@@ -1299,12 +1304,12 @@ private fun OutputSizeRow(
     ) {
         LocalizedText(
             text = "${spec.tileCount} file",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonoFamily),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         LocalizedText(
             text = "${spec.outputWidth(format)} x ${spec.outputHeight(format)} px",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonoFamily),
             color = MaterialTheme.colorScheme.primary,
         )
     }
