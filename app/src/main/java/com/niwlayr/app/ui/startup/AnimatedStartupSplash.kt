@@ -36,7 +36,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val MarkStroke = Color(0xFF202124)
+private val SplashBackdrop = Color(0xFF0B0B0E)
+private val MarkStroke = Color(0xFFF4F2EC)
 private val MarkGradient = listOf(
     Color(0xFFFFB000),
     Color(0xFFFF6A43),
@@ -61,17 +62,17 @@ fun AnimatedStartupSplash(
 
     DisposableEffect(view) {
         val window = (view.context as? Activity)?.window
-        window?.statusBarColor = AndroidColor.WHITE
-        window?.navigationBarColor = AndroidColor.WHITE
+        window?.statusBarColor = AndroidColor.rgb(11, 11, 14)
+        window?.navigationBarColor = AndroidColor.rgb(11, 11, 14)
         window?.let { target ->
             WindowInsetsControllerCompat(target, view).apply {
-                isAppearanceLightStatusBars = true
-                isAppearanceLightNavigationBars = true
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
             }
         }
         onDispose {
-            window?.statusBarColor = AndroidColor.rgb(13, 15, 20)
-            window?.navigationBarColor = AndroidColor.rgb(13, 15, 20)
+            window?.statusBarColor = AndroidColor.rgb(11, 11, 14)
+            window?.navigationBarColor = AndroidColor.rgb(11, 11, 14)
             window?.let { target ->
                 WindowInsetsControllerCompat(target, view).apply {
                     isAppearanceLightStatusBars = false
@@ -111,7 +112,7 @@ fun AnimatedStartupSplash(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White),
+                .background(SplashBackdrop),
             contentAlignment = Alignment.Center,
         ) {
             VectorGridMark(
