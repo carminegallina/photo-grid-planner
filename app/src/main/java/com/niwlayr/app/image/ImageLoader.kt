@@ -46,7 +46,12 @@ object ImageLoader {
     }
 
     private fun loadWithImageDecoder(context: Context, uri: Uri, maxSize: Int): Bitmap {
-        val source = ImageDecoder.createSource(context.contentResolver, uri)
+        val filePath = uri.path
+        val source = if (uri.scheme == "file" && filePath != null) {
+            ImageDecoder.createSource(java.io.File(filePath))
+        } else {
+            ImageDecoder.createSource(context.contentResolver, uri)
+        }
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             val width = info.size.width
