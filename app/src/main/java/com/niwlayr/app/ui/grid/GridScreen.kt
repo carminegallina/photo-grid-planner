@@ -1480,7 +1480,10 @@ private fun ReorderableGrid(
                                     dragCenter = dragStartCenter
                                     dragDistance = Offset.Zero
                                     hasDragged = false
-                                    menuPostId = null
+                                    // Reveal the per-post menu as soon as the long-press is
+                                    // recognised, instead of requiring the finger to be lifted
+                                    // perfectly still. A real drag dismisses it again (see onDrag).
+                                    menuPostId = if (post.kind == PostKind.Image) post.id else null
                                 },
                                 onDragCancel = {
                                     draggedId = null
@@ -1493,9 +1496,9 @@ private fun ReorderableGrid(
                                 onDragEnd = {
                                     if (hasDragged) {
                                         onReorderFinished(displayedPosts)
-                                    } else if (post.kind == PostKind.Image) {
-                                        menuPostId = post.id
                                     }
+                                    // When the finger is lifted without dragging, the menu
+                                    // opened in onDragStart simply stays visible.
                                     draggedId = null
                                     dragStartCenter = Offset.Zero
                                     dragCenter = Offset.Zero
@@ -1510,7 +1513,11 @@ private fun ReorderableGrid(
                                     if (!hasDragged && dragDistance.getDistance() < touchSlop) {
                                         return@detectDragGesturesAfterLongPress
                                     }
-                                    hasDragged = true
+                                    if (!hasDragged) {
+                                        // A real drag has started: leave menu mode and reorder.
+                                        hasDragged = true
+                                        menuPostId = null
+                                    }
 
                                     val target = displayedPosts.firstOrNull { candidate ->
                                         candidate.id != post.id &&
