@@ -4,13 +4,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import com.niwlayr.app.data.AppLanguage
 import com.niwlayr.app.share.SharedImageImporter
 import com.niwlayr.app.ui.PhotoGridPlannerApp
 import com.niwlayr.app.ui.theme.PhotoGridPlannerTheme
@@ -61,15 +59,9 @@ class MainActivity : ComponentActivity() {
             val local = withContext(Dispatchers.IO) {
                 SharedImageImporter.importToLocal(this@MainActivity, shared)
             }
-            if (local.isEmpty()) return@launch
-            plannerViewModel.addImages(local)
-            val english = plannerViewModel.state.value.language == AppLanguage.English
-            val message = if (english) {
-                "Added ${local.size} image(s) to the grid"
-            } else {
-                "Aggiunte ${local.size} immagini alla griglia"
+            if (local.isNotEmpty()) {
+                plannerViewModel.offerSharedImport(local)
             }
-            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
         }
     }
 

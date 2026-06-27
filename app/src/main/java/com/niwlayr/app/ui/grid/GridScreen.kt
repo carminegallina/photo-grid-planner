@@ -60,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -121,6 +122,31 @@ fun GridScreen(
     var pendingCandidateImport by remember { mutableStateOf<PendingGridImport?>(null) }
     var resumePreviewPostId by remember { mutableStateOf<String?>(null) }
     var showPhotoLibrary by remember { mutableStateOf(false) }
+
+    // Single entry point for importing picked images, so photos shared into the app go through
+    // the same single / mosaic / carousel routing (and ordering) as the in-app picker.
+    fun routeImportedPhotos(uris: List<android.net.Uri>) {
+        when (uris.size) {
+            0 -> Unit
+            1 -> if (state.analyzeImports) {
+                pendingCandidateImport = PendingGridImport(
+                    uris = uris,
+                    type = PendingGridImportType.Post,
+                )
+            } else {
+                viewModel.addImages(uris)
+            }
+            else -> pendingImportUris = uris
+        }
+    }
+
+    val pendingSharedImport by viewModel.pendingSharedImport.collectAsState()
+    LaunchedEffect(pendingSharedImport) {
+        if (pendingSharedImport.isNotEmpty()) {
+            routeImportedPhotos(pendingSharedImport.map { android.net.Uri.parse(it) })
+            viewModel.consumeSharedImport()
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -203,20 +229,7 @@ fun GridScreen(
                 }
                 replacePlaceholderId = null
             } else {
-                when (uris.size) {
-                    0 -> Unit
-                    1 -> {
-                        if (state.analyzeImports) {
-                            pendingCandidateImport = PendingGridImport(
-                                uris = uris,
-                                type = PendingGridImportType.Post,
-                            )
-                        } else {
-                            viewModel.addImages(uris)
-                        }
-                    }
-                    else -> pendingImportUris = uris
-                }
+                routeImportedPhotos(uris)
             }
         },
     )

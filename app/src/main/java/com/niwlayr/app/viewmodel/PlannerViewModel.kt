@@ -19,8 +19,10 @@ import com.niwlayr.app.notifications.PublicationReminderScheduler
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -32,6 +34,11 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
         initialValue = PlannerData(showTutorialOnLaunch = false),
     )
+
+    // Images handed to the app through the Android share sheet, waiting for the grid to route
+    // them through the same import flow as the in-app picker (single / mosaic / carousel).
+    private val _pendingSharedImport = MutableStateFlow<List<String>>(emptyList())
+    val pendingSharedImport: StateFlow<List<String>> = _pendingSharedImport.asStateFlow()
 
     private var mediaCleanupJob: Job? = null
     private var initialMediaCleanupChecked = false
@@ -53,6 +60,15 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.addImages(uris.map { it.toString() })
         }
+    }
+
+    fun offerSharedImport(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        _pendingSharedImport.value = uris.map { it.toString() }
+    }
+
+    fun consumeSharedImport() {
+        _pendingSharedImport.value = emptyList()
     }
 
     fun insertImage(uri: Uri, position: Int) {
