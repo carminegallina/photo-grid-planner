@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,11 +53,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.niwlayr.app.ui.theme.MonoFamily
+import com.niwlayr.app.ui.theme.SpectrumStops
 import com.niwlayr.app.analysis.ColorCluster
 import com.niwlayr.app.analysis.FeedAnalysisResult
 import com.niwlayr.app.analysis.FeedAnalyzer
@@ -112,10 +121,19 @@ fun FeedAnalysisScreen(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        LocalizedText(
-            text = "Analisi Feed",
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LocalizedText(
+                text = "Analisi Feed",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Box(
+                modifier = Modifier
+                    .width(58.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Brush.horizontalGradient(SpectrumStops)),
+            )
+        }
 
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -196,24 +214,60 @@ private fun ScoreCard(result: FeedAnalysisResult) {
                     )
                 }
             }
-            Surface(
-                color = scoreColor(result.score.finalScore).copy(alpha = 0.18f),
-                shape = RoundedCornerShape(999.dp),
-            ) {
-                LocalizedText(
-                    text = "${result.score.finalScore}/100",
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = scoreColor(result.score.finalScore),
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            ScoreRing(score = result.score.finalScore)
         }
 
         ScoreRow("Coerenza cromatica", result.score.colorConsistency)
         ScoreRow("Bilanciamento luminosita", result.score.brightnessBalance)
         ScoreRow("Bilanciamento saturazione", result.score.saturationBalance)
         ScoreRow("Armonia generale", result.score.harmony)
+    }
+}
+
+@Composable
+private fun ScoreRing(score: Int) {
+    val spectrum = remember { Brush.sweepGradient(SpectrumStops + SpectrumStops.first()) }
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        modifier = Modifier.size(78.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 7.dp.toPx()
+            val inset = strokeWidth / 2f
+            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+            val topLeft = Offset(inset, inset)
+            drawArc(
+                color = trackColor,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+            drawArc(
+                brush = spectrum,
+                startAngle = -90f,
+                sweepAngle = 360f * (score.coerceIn(0, 100) / 100f),
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            LocalizedText(
+                text = score.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(fontFamily = MonoFamily),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            LocalizedText(
+                text = "/100",
+                style = MaterialTheme.typography.labelSmall.copy(fontFamily = MonoFamily),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -228,7 +282,7 @@ private fun ScoreRow(label: String, value: Int) {
             LocalizedText(label, style = MaterialTheme.typography.bodyMedium)
             LocalizedText(
                 text = "$value/100",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonoFamily),
                 color = scoreColor(value),
                 fontWeight = FontWeight.Bold,
             )
