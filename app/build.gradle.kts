@@ -39,8 +39,8 @@ android {
         applicationId = "com.niwlayr.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.5.30-beta"
+        versionCode = 48
+        versionName = "1.5.31-beta"
     }
 
     buildFeatures {
