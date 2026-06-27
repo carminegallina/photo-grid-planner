@@ -1513,9 +1513,12 @@ private fun ReorderableGrid(
                                 onDragEnd = {
                                     if (hasDragged) {
                                         onReorderFinished(displayedPosts)
+                                    } else if (post.kind == PostKind.Placeholder) {
+                                        // Long-press without dragging opens the placeholder
+                                        // menu, mirroring a tap on it.
+                                        onPlaceholderClick(post)
                                     }
-                                    // When the finger is lifted without dragging, the menu
-                                    // opened in onDragStart simply stays visible.
+                                    // For images the menu opened in onDragStart stays visible.
                                     draggedId = null
                                     dragStartCenter = Offset.Zero
                                     dragCenter = Offset.Zero
