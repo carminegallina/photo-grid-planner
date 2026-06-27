@@ -4,6 +4,7 @@ import com.niwlayr.app.ui.i18n.LocalizedText
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -228,6 +229,13 @@ private fun ScoreCard(result: FeedAnalysisResult) {
 private fun ScoreRing(score: Int) {
     val spectrum = remember { Brush.sweepGradient(SpectrumStops + SpectrumStops.first()) }
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(score) {
+        progress.animateTo(
+            targetValue = score.coerceIn(0, 100) / 100f,
+            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        )
+    }
     Box(
         modifier = Modifier.size(78.dp),
         contentAlignment = Alignment.Center,
@@ -249,7 +257,7 @@ private fun ScoreRing(score: Int) {
             drawArc(
                 brush = spectrum,
                 startAngle = -90f,
-                sweepAngle = 360f * (score.coerceIn(0, 100) / 100f),
+                sweepAngle = 360f * progress.value,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
@@ -258,7 +266,7 @@ private fun ScoreRing(score: Int) {
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             LocalizedText(
-                text = score.toString(),
+                text = (progress.value * 100).roundToInt().toString(),
                 style = MaterialTheme.typography.titleLarge.copy(fontFamily = MonoFamily),
                 color = MaterialTheme.colorScheme.onSurface,
             )
